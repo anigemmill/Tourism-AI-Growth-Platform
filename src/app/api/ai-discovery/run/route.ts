@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { runAIDiscovery } from "@/lib/engine/ai-discovery";
 import { getActiveDestinationConfig } from "@/config/destinations";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+// LLM-backed and cost-incurring — bound how often one account can trigger it.
+const WINDOW_MS = 10 * 60_000;
+const MAX_RUNS = 5;
 
 export async function POST() {
   const session = await getSession();
@@ -10,6 +15,14 @@ export async function POST() {
     return NextResponse.json(
       { error: "Running the AI Discovery Engine requires a PARTNER or ADMIN session." },
       { status: 403 }
+    );
+  }
+
+  const limit = await checkRateLimit(`ai-discovery:${session.email}`, WINDOW_MS, MAX_RUNS);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Try again in a few minutes." },
+      { status: 429 }
     );
   }
 

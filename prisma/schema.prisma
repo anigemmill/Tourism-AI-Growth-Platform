@@ -871,6 +871,17 @@ model LoginAttempt {
   @@index([email, createdAt])
 }
 
+// Generic sliding-window counter for src/lib/rate-limit.ts. `key` is
+// "<scope>:<identifier>", e.g. "login-ip:203.0.113.4" or
+// "ai-discovery:usr_123" — one row per attempt, counted within a window.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
   actorId    String?

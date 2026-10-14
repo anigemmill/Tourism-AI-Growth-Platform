@@ -7,6 +7,13 @@ import { attemptLogin, revokeToken } from "@/lib/auth/core";
 import { setSessionCookie, clearSessionCookie } from "@/lib/auth/session";
 import { SESSION_COOKIE } from "@/lib/auth/tokens";
 import type { ActionState } from "@/lib/forms";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+
+// Looser than core.ts's per-email lockout (8/15min) — this blocks a single
+// source spraying many different emails, which the per-email check alone
+// does not catch.
+const LOGIN_IP_WINDOW_MS = 15 * 60_000;
+const LOGIN_IP_MAX_ATTEMPTS = 30;
 
 const schema = z.object({
   email: z.email({ error: "Enter a valid email." }),
@@ -22,7 +29,14 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const ua = (await headers()).get("user-agent");
+  const h = await headers();
+  const ip = clientIp(h);
+  const ipLimit = await checkRateLimit(`login-ip:${ip}`, LOGIN_IP_WINDOW_MS, LOGIN_IP_MAX_ATTEMPTS);
+  if (!ipLimit.allowed) {
+    return { error: "Too many sign-in attempts from this network. Try again later." };
+  }
+
+  const ua = h.get("user-agent");
   const result = await attemptLogin(parsed.data.email, parsed.data.password, ua);
   if (!result.ok) return { error: result.error };
 

@@ -17,6 +17,12 @@ export interface AuthUser {
 const LOCKOUT_WINDOW_MIN = 15;
 const LOCKOUT_MAX_FAILURES = 8;
 
+// No password hashes to this value — it exists only so the "user not found"
+// path pays the same scrypt cost as a real verification, closing a timing
+// side-channel that would otherwise let an attacker enumerate valid emails.
+const DUMMY_PASSWORD_HASH =
+  "scrypt$16384$8$1$mO2pzXAENfOxSKOicaL1Bg==$AWCdQBqk6l5/gFvq/kNPa86zq53Uy2wdwXJ3jDXm86821q5JJGVTDDhUBIDQHb+Dizu+/vjOLbKBDsKtJGNBNw==";
+
 export type LoginResult =
   | { ok: true; user: AuthUser; token: string; expiresAt: Date }
   | { ok: false; error: string };
@@ -39,7 +45,10 @@ export async function attemptLogin(
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  const valid = user && user.active ? await verifyPassword(password, user.passwordHash) : false;
+  // Always run a scrypt verification, even for a nonexistent/inactive user,
+  // so response time doesn't reveal whether the email is registered.
+  const passwordOk = await verifyPassword(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  const valid = Boolean(user && user.active && passwordOk);
   // Operators must be linked to a business; an unlinked operator account is unusable.
   const linked = user ? user.role !== "OPERATOR" || !!user.operatorId : false;
 

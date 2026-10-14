@@ -4,8 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { answerScenario } from "@/lib/engine/scenario";
 import { getActiveDestinationConfig } from "@/config/destinations";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({ question: z.string().min(3).max(500) });
+const WINDOW_MS = 10 * 60_000;
+const MAX_QUERIES = 20;
 
 export async function GET() {
   const session = await getSession();
@@ -39,6 +42,14 @@ export async function POST(request: NextRequest) {
   const body = bodySchema.safeParse(await request.json());
   if (!body.success) {
     return NextResponse.json({ error: "Invalid question", issues: body.error.issues }, { status: 400 });
+  }
+
+  const limit = await checkRateLimit(`scenario:${session.email}`, WINDOW_MS, MAX_QUERIES);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Try again in a few minutes." },
+      { status: 429 }
+    );
   }
 
   const config = getActiveDestinationConfig();
