@@ -8,6 +8,7 @@ import { setSessionCookie, clearSessionCookie } from "@/lib/auth/session";
 import { SESSION_COOKIE } from "@/lib/auth/tokens";
 import type { ActionState } from "@/lib/forms";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { isSafeNext } from "@/lib/auth/redirect";
 
 // Looser than core.ts's per-email lockout (8/15min) — this blocks a single
 // source spraying many different emails, which the per-email check alone
@@ -43,7 +44,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   await setSessionCookie(result.token, result.expiresAt);
   // Only allow same-site relative redirects.
   const next = parsed.data.next;
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  const safeNext = isSafeNext(next) ? next : null;
   redirect(result.user.role === "OPERATOR" ? "/portal" : safeNext ?? "/");
 }
 

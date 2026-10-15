@@ -15,6 +15,7 @@ import {
   acceptInvite, changeOwnPassword, requestPasswordReset, resetPasswordWithToken, sendAccountLink, verifyEmailWithToken,
 } from "@/lib/auth/flows";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { emailConfigured } from "@/lib/email";
 import type { ActionState } from "@/lib/forms";
 
 const MIN = 60_000;
@@ -35,6 +36,9 @@ export async function forgotPassword(_: ActionState, fd: FormData): Promise<Acti
   const email = z.email().safeParse(String(fd.get("email") ?? "").trim());
   if (!email.success) return { error: "Enter a valid email." };
   if (await limited("forgot-ip", 10, 15 * MIN)) return TOO_MANY;
+  // Without an email provider no link can be delivered; say so rather than
+  // claiming one was sent (this reveals nothing about which accounts exist).
+  if (!emailConfigured()) return { error: "Password reset by email isn't available yet. Please contact your programme lead." };
   // Per-address limit stops someone flooding a person's inbox; it fails
   // silently so it can't be used to discover whether an account exists.
   const perEmail = await checkRateLimit(`forgot-email:${email.data.toLowerCase()}`, 60 * MIN, 3);

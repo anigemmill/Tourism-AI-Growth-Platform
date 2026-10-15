@@ -87,9 +87,13 @@ export async function inviteUser(
     if (businesses.length !== new Set(input.businessIds).size) throw new AdminError("One of the selected businesses no longer exists.");
 
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing && existing.status !== "PENDING") throw new AdminError("An account with that email already exists.");
+    // A never-activated account (pending, or a revoked invitation) can be
+    // re-invited; anything that has ever had a password cannot.
+    const reinvitable = existing && !existing.passwordHash && (existing.status === "PENDING" || existing.status === "ARCHIVED");
+    if (existing && !reinvitable) throw new AdminError("An account with that email already exists.");
+    if (existing) guardTarget(actor, existing);
     const user = existing
-      ? await prisma.user.update({ where: { id: existing.id }, data: { name: input.name, role: input.role } })
+      ? await prisma.user.update({ where: { id: existing.id }, data: { name: input.name, role: input.role, status: "PENDING" } })
       : await prisma.user.create({ data: { email, name: input.name, role: input.role, status: "PENDING" } });
     if (input.businessIds.length) {
       await prisma.userBusiness.createMany({ data: input.businessIds.map((operatorId) => ({ userId: user.id, operatorId })), skipDuplicates: true });

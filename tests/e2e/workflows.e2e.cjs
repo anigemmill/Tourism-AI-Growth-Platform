@@ -157,7 +157,8 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   // Forgot password never reveals whether an account exists
   const fp = await (await b.newContext()).newPage();
   await fp.goto(B + "/forgot-password"); await fp.fill("#email", `nobody-${stamp}@demo.example`); await fp.click("button:has-text('Send reset link')");
-  await check("forgot password gives a generic answer", await seen(fp.getByRole("status").filter({ hasText: "If an account exists" })));
+  // Generic answer when email is configured; otherwise an honest "not available" (still reveals nothing).
+  await check("forgot password never reveals whether an account exists", await seen(fp.locator("[role=status], [role=alert]").filter({ hasText: /If an account exists|isn't available yet/ })));
 
   // Operator cannot download exports/reports
   const o = await login(b, "operator1@demo.example", "demo-pass-12345"); lastPage = o;

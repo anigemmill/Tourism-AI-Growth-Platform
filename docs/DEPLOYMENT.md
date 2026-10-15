@@ -59,11 +59,11 @@ free Hobby plan does not allow commercial use), and access to the GitHub repo
    | `SETUP_TOKEN` | A long random string, e.g. output of `openssl rand -base64 32` (at least 24 characters). Only needed until the first super admin exists. |
    | `RESEND_API_KEY` | API key from resend.com (sensitive). Enables invitation, password-reset and email-confirmation emails. |
    | `EMAIL_FROM` | Verified sender, e.g. `Outside In <no-reply@theoutsidein.nz>` (the domain must be verified in Resend). |
-   | `APP_URL` | Optional. Public base URL used in emailed links, e.g. `https://www.theoutsidein.nz`. Defaults to the Vercel production URL. |
+   | `APP_URL` | **Required with email.** Public base URL for emailed links, e.g. `https://tourism-ai-growth-platform.vercel.app` (switch to the custom domain once its DNS points at Vercel). Without it, links use Vercel's chosen production domain, which can be a custom domain that isn't live yet. |
 
    Without `RESEND_API_KEY` + `EMAIL_FROM` nothing is emailed: a super admin
    is shown a single-use link to hand over in person instead, and
-   self-service "Forgotten your password?" can't deliver its link.
+   "Forgotten your password?" tells people to contact their programme lead.
 
    Do **not** add `SEED_DEMO` or any `SEED_*` variables.
 
@@ -108,14 +108,24 @@ required — the session cookie is `Secure` in production.
   automatically; if one fails, the build fails and the previous version stays
   live.
 - **Rollback:** Vercel → Deployments → previous deployment → *Promote to
-  Production*. Note database migrations are forward-only; a rollback of code
-  does not undo a migration. Prefer additive migrations.
+  Production* (Instant Rollback). Database migrations are forward-only; a
+  rollback of code does not undo a migration, so migrations must be
+  expand-only (add, never drop/rename in the same release). The previous
+  release must keep working on the new schema.
+- **Admin & access release (`20261016000000_admin_access_billing`):**
+  expand-only. `User.active` is kept and mirrored from `status` by a database
+  trigger, so the previous release works during the deploy and after a
+  rollback (verified by running the previous release's end-to-end suite on the
+  migrated database). One limit after a rollback: if users were invited
+  (no password yet) or given the new Programme Manager / Analyst roles, the
+  old *Users & access* page and sign-in for those emails return errors. Roll
+  forward instead of back once such users exist.
 - **Backups:** Supabase Pro takes daily backups (Database → Backups). For
   extra safety, download a full export monthly from the app
   (*Data export → Download everything*) and store it securely.
 - **Adding people:** Administration → Users → *Invite a user* (see
   `docs/ACCESS.md`). People set their own password from the emailed link.
-- **Locked out?** See "Recovering super-admin access" in `docs/ACCESS.md`.
+- **Locked out?** See "First super admin & recovery" in `docs/ACCESS.md`.
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs lint, type-check,
   unit tests, database integration tests and a build on every push.
 

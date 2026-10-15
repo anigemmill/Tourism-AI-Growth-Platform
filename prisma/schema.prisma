@@ -866,6 +866,11 @@ model User {
   operatorId        String?
   operator          Operator?  @relation(fields: [operatorId], references: [id])
   status            UserStatus @default(ACTIVE)
+  // DEPRECATED — read only by the previous release. Kept equal to
+  // (status == ACTIVE) by a database trigger (migration
+  // 20261016000000_admin_access_billing). Never read or write it in new code;
+  // drop it in a later migration.
+  active            Boolean    @default(true)
   emailVerifiedAt   DateTime?
   lastLoginAt       DateTime?
   passwordChangedAt DateTime?

@@ -1,9 +1,7 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `active` on the `User` table. All the data in the column will be lost.
-
-*/
+-- Admin & access management. EXPAND-ONLY: nothing is dropped or renamed, so
+-- the previous application version keeps working while this deploys and
+-- after a rollback. User."active" is kept (see the trigger below) and can be
+-- dropped in a later release once no deployment reads it.
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'ACTIVE', 'SUSPENDED', 'ARCHIVED');
 
@@ -50,14 +48,34 @@ ADD COLUMN     "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE "Operator" ADD COLUMN     "accountStatus" "BusinessAccountStatus" NOT NULL DEFAULT 'ACTIVE',
 ADD COLUMN     "cohort" TEXT;
 
--- AlterTable: replace the "active" flag with a status, keeping deactivated
--- users deactivated (ARCHIVED).
+-- AlterTable: "status" supersedes the "active" flag; deactivated users stay
+-- deactivated (ARCHIVED).
 ALTER TABLE "User" ADD COLUMN     "emailVerifiedAt" TIMESTAMP(3),
 ADD COLUMN     "passwordChangedAt" TIMESTAMP(3),
 ADD COLUMN     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
 ALTER COLUMN "passwordHash" DROP NOT NULL;
 UPDATE "User" SET "status" = 'ARCHIVED' WHERE "active" = false;
-ALTER TABLE "User" DROP COLUMN "active";
+
+-- Keep the legacy "active" flag consistent with "status" in both directions,
+-- so the previous version (which reads and writes "active") behaves correctly
+-- during the deploy and after any rollback: a suspended, deactivated or
+-- invited user is never active, and deactivating via the old screen archives.
+CREATE OR REPLACE FUNCTION "user_sync_active_status"() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW."active" IS DISTINCT FROM OLD."active" AND NEW."status" IS NOT DISTINCT FROM OLD."status" THEN
+    -- Written by the previous version: derive status from active.
+    NEW."status" := CASE WHEN NEW."active" THEN 'ACTIVE'::"UserStatus" ELSE 'ARCHIVED'::"UserStatus" END;
+  ELSIF TG_OP = 'INSERT' AND NEW."active" = false AND NEW."status" = 'ACTIVE' THEN
+    NEW."status" := 'ARCHIVED';
+  END IF;
+  NEW."active" := (NEW."status" = 'ACTIVE');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SET search_path FROM CURRENT;
+
+CREATE TRIGGER "User_sync_active_status"
+BEFORE INSERT OR UPDATE ON "User"
+FOR EACH ROW EXECUTE FUNCTION "user_sync_active_status"();
 
 -- CreateTable
 CREATE TABLE "UserBusiness" (

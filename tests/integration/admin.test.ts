@@ -88,6 +88,26 @@ test("invitation: resending invalidates the earlier link; revoking stops it", as
   assert.equal((await acceptInvite(first, PW)).ok, false, "old link revoked");
   assert.ok((await admin.revokeInvite(superActor(), u.id)).ok);
   assert.equal((await acceptInvite(second, PW)).ok, false, "revoked invite unusable");
+  // A revoked invitation can be sent again, and works.
+  assert.ok((await admin.inviteUser(superActor(), { name: "Rev", email: mail("revoke"), role: "ANALYST", businessIds: [] })).ok);
+  assert.ok((await acceptInvite(linkFrom(mail("revoke")), PW)).ok);
+  const again = await admin.inviteUser(superActor(), { name: "Rev", email: mail("revoke"), role: "ANALYST", businessIds: [] });
+  assert.equal(again.ok, false, "an activated account can't be re-invited");
+});
+
+test("legacy active flag mirrors status both ways (previous release + rollback safety)", async () => {
+  const email = mail("legacy");
+  const u = await prisma.user.create({ data: { email, name: "L", role: "ANALYST", passwordHash: await hashPassword(PW) } });
+  const flag = async () => (await prisma.$queryRaw<{ active: boolean; status: string }[]>`SELECT active, status::text FROM "User" WHERE id = ${u.id}`)[0];
+  assert.deepEqual(await flag(), { active: true, status: "ACTIVE" });
+  await prisma.user.update({ where: { id: u.id }, data: { status: "SUSPENDED" } });
+  assert.deepEqual(await flag(), { active: false, status: "SUSPENDED" });
+  await prisma.$executeRaw`UPDATE "User" SET active = true WHERE id = ${u.id}`; // what the old "Reactivate" did
+  assert.deepEqual(await flag(), { active: true, status: "ACTIVE" });
+  await prisma.$executeRaw`UPDATE "User" SET active = false WHERE id = ${u.id}`; // old "Deactivate"
+  assert.deepEqual(await flag(), { active: false, status: "ARCHIVED" });
+  const p = await prisma.user.create({ data: { email: mail("legacy-pending"), name: "P", role: "ANALYST", status: "PENDING" } });
+  assert.equal((await prisma.$queryRaw<{ active: boolean }[]>`SELECT active FROM "User" WHERE id = ${p.id}`)[0].active, false, "invited users are never active");
 });
 
 test("password reset: generic for unknown emails; link resets once, signs out everywhere", async () => {
@@ -155,6 +175,9 @@ test("non-super-admins can't touch super admin accounts or assign staff roles", 
   assert.equal(r.ok, false);
   const inv = await admin.inviteUser(s, { name: "x", email: mail("escalate"), role: "FOUNDER", businessIds: [] });
   assert.equal(inv.ok, false);
+  await admin.inviteUser(superActor(), { name: "Pending super", email: mail("pending-super"), role: "FOUNDER", businessIds: [] });
+  const hijack = await admin.inviteUser(s, { name: "x", email: mail("pending-super"), role: "ANALYST", businessIds: [] });
+  assert.equal(hijack.ok, false, "staff can't re-invite a pending super admin");
   const inv2 = await admin.inviteUser(s, { name: "x", email: mail("escalate2"), role: "ADMIN", businessIds: [] });
   assert.equal(inv2.ok, false, "users.roles is needed to invite staff");
   const perm = await admin.setUserPermission(s, superId, "billing.view", true);
