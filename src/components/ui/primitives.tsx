@@ -67,7 +67,7 @@ export function Card({
   padded?: boolean;
 }) {
   return (
-    <section className={cx("rounded-2xl border border-line bg-surface", className)}>
+    <section className={cx("rounded-2xl border border-line/70 bg-surface shadow-sm", className)}>
       {(title || actions) && (
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
@@ -91,6 +91,7 @@ export function Stat({
   href,
   tone,
   variant = "plain",
+  icon,
 }: {
   label: string;
   value: ReactNode;
@@ -98,12 +99,21 @@ export function Stat({
   href?: string;
   tone?: "default" | "warning" | "danger" | "success";
   variant?: StatVariant;
+  /** Small glyph shown in a circular chip, top-right (Niond-style stat card). */
+  icon?: ReactNode;
 }) {
   const surfaces: Record<StatVariant, string> = {
     plain: "border border-line bg-surface text-ink",
+    orange: "bg-brand-soft text-ink",
+    forest: "bg-accent-soft text-ink",
+    night: "bg-night text-night-ink",
+    lime: "bg-lime/20 text-ink",
+  };
+  const chips: Record<StatVariant, string> = {
+    plain: "bg-surface-2 text-muted",
     orange: "bg-brand text-brand-ink",
     forest: "bg-accent text-accent-ink",
-    night: "bg-night text-night-ink",
+    night: "bg-lime text-lime-ink",
     lime: "bg-lime text-lime-ink",
   };
   const valueTone =
@@ -111,12 +121,15 @@ export function Stat({
   const subTone = variant === "plain" ? "text-subtle" : "opacity-75";
   const inner = (
     <>
-      <p className={cx("eyebrow", variant === "plain" ? "text-muted" : "opacity-80")}>{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className={cx("eyebrow", variant === "plain" ? "text-muted" : "opacity-80")}>{label}</p>
+        {icon && <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", chips[variant])}>{icon}</span>}
+      </div>
       <p className={cx("mt-3 font-mono text-[1.85rem] font-medium leading-none tracking-tight tabular-nums", valueTone)}>{value}</p>
       {sub && <p className={cx("mt-2 text-xs", subTone)}>{sub}</p>}
     </>
   );
-  const cls = cx("block rounded-2xl p-4", surfaces[variant]);
+  const cls = cx("block rounded-2xl p-4 shadow-sm", surfaces[variant]);
   return href ? (
     <Link href={href} className={cx(cls, "transition-transform hover:-translate-y-0.5")}>
       {inner}

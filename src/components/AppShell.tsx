@@ -51,11 +51,11 @@ export function AppShell({
                       aria-current={active ? "page" : undefined}
                       className={cx(
                         "flex items-center justify-between rounded-full px-3 py-1.5 text-[13px] transition-colors",
-                        active ? "bg-night font-medium text-night-ink" : "text-muted hover:bg-surface hover:text-ink"
+                        active ? "bg-lime font-medium text-lime-ink" : "text-muted hover:bg-surface hover:text-ink"
                       )}
                     >
                       <span>{item.label}</span>
-                      {item.badge && <span className={cx("rounded-full px-1.5 font-mono text-[9px] uppercase tracking-wide", active ? "bg-lime text-lime-ink" : "bg-lime/60 text-lime-ink")}>{item.badge}</span>}
+                      {item.badge && <span className={cx("rounded-full px-1.5 font-mono text-[9px] uppercase tracking-wide", active ? "bg-night text-night-ink" : "bg-lime/60 text-lime-ink")}>{item.badge}</span>}
                     </Link>
                   </li>
                 );
