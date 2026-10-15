@@ -1,3 +1,4 @@
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getCurrentDestination } from "@/lib/destination";
 import { getSession } from "@/lib/session";
@@ -5,8 +6,9 @@ import { Card, SectionHeading, EmptyState, Badge } from "@/components/ui";
 import { AIDiscoveryRunButton } from "@/components/AIDiscoveryRunButton";
 
 export default async function AIVisibilityPage() {
+  await requirePermission("destination.view");
   const session = await getSession();
-  const canManage = session.role === "PARTNER" || session.role === "ADMIN";
+  const canManage = session.canManage;
   const destination = await getCurrentDestination();
   const [prompts, checks] = destination
     ? await Promise.all([
@@ -37,7 +39,7 @@ export default async function AIVisibilityPage() {
           <AIDiscoveryRunButton />
         ) : (
           <p className="text-xs text-black/50 dark:text-white/50">
-            Switch your dev session role to PARTNER or ADMIN in the sidebar to run this.
+            Requires the “Import data &amp; run connectors” permission.
           </p>
         )}
       </Card>

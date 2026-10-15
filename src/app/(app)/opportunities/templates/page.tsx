@@ -1,12 +1,12 @@
 import { ActionForm, Badge, Card, EmptyState, FormGrid, PageHeader, Select, TextArea, TextField } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { AREA_LABELS, SOLUTION_LABELS, options } from "@/lib/labels";
 import { formatNzd } from "@/lib/format";
 import { applyTemplate, createTemplate } from "../actions";
 
 export default async function TemplatesPage() {
-  await requireStaff();
+  await requirePermission("opportunities.view");
   const [templates, operators, assets] = await Promise.all([
     prisma.solutionTemplate.findMany({ orderBy: { name: "asc" }, include: { workflowAsset: { select: { name: true, status: true } }, _count: { select: { opportunities: true } } } }),
     prisma.operator.findMany({ where: { status: { notIn: ["WITHDRAWN"] } }, orderBy: { name: "asc" }, select: { id: true, name: true } }),

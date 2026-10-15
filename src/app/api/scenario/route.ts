@@ -12,7 +12,7 @@ const MAX_QUERIES = 20;
 
 export async function GET() {
   const session = await getSession();
-  if (session.role !== "ADMIN") {
+  if (session.role !== "ADMIN" && session.role !== "PARTNER") {
     return NextResponse.json(
       { error: "The Scenario Engine is available to programme staff only." },
       { status: 403 }
@@ -32,7 +32,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (session.role !== "ADMIN") {
+  if (session.role !== "ADMIN" && session.role !== "PARTNER") {
     return NextResponse.json(
       { error: "The Scenario Engine is available to programme staff only." },
       { status: 403 }

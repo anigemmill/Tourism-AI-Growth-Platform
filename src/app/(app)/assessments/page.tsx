@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { AssessmentStatusBadge, Badge, Card, PageHeader, Table, Stat } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 
 export default async function AssessmentsPage() {
-  await requireStaff();
+  await requirePermission("assessments.view");
   const operators = await prisma.operator.findMany({
     where: { status: { notIn: ["WITHDRAWN"] } },
     orderBy: { name: "asc" },

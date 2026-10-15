@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -11,7 +11,7 @@ import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
 const WORK = z.enum(["TODO", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]);
 
 export async function createRisk(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("governance.edit");
   const parsed = parseForm(z.object({ kind: z.enum(["RISK", "BLOCKER", "ISSUE"]), title: f.str(), detail: f.optStr(), severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]), operatorId: f.optId(), owner: f.optStr(), mitigation: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -23,7 +23,7 @@ export async function createRisk(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function updateRisk(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("governance.edit");
   const parsed = parseForm(z.object({ status: WORK, mitigation: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -35,7 +35,7 @@ export async function updateRisk(id: string, _: ActionState, fd: FormData): Prom
 }
 
 export async function createDecision(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("governance.edit");
   const parsed = parseForm(z.object({ title: f.str(), whatChanged: f.str(), evidence: f.optStr(), whyItMatters: f.optStr(), nextAction: f.optStr(), owner: f.optStr(), reviewDate: f.optDate(), operatorId: f.optId() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -47,7 +47,7 @@ export async function createDecision(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function resolveDecision(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("governance.edit");
   const parsed = parseForm(z.object({ outcome: f.str() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {

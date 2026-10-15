@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ActionForm, Card, FormGrid, PageHeader, Select, Table, TextArea, TextField, WorkStatusBadge } from "@/components/ui";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions, staffOptions } from "@/lib/queries";
 import { WORK_STATUS_LABELS, options } from "@/lib/labels";
@@ -11,7 +11,7 @@ import { toDateInput } from "@/lib/format";
 import { saveAttendance, updateWorkshop } from "../../actions";
 
 export default async function WorkshopPage({ params }: PageProps<"/collective/workshops/[id]">) {
-  await requireStaff();
+  await requirePermission("collective.view");
   const { id } = await params;
   const w = await prisma.workshop.findUnique({
     where: { id },

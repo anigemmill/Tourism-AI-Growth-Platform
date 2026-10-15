@@ -34,9 +34,11 @@ before(async () => {
       { email: emails.b, name: "B user", role: "OPERATOR", operatorId: B, passwordHash: hash },
       { email: emails.staff, name: "Staff", role: "ADMIN", passwordHash: hash },
       { email: emails.unlinked, name: "Unlinked", role: "OPERATOR", passwordHash: hash },
-      { email: emails.inactive, name: "Inactive", role: "ADMIN", passwordHash: hash, active: false },
+      { email: emails.inactive, name: "Inactive", role: "ADMIN", passwordHash: hash, status: "ARCHIVED" },
     ],
   });
+  const ids = Object.fromEntries((await prisma.user.findMany({ where: { email: { in: [emails.a, emails.b] } } })).map((u) => [u.email, u.id]));
+  await prisma.userBusiness.createMany({ data: [{ userId: ids[emails.a], operatorId: A }, { userId: ids[emails.b], operatorId: B }] });
   const opp = (operatorId: string, title: string, visibility: "INTERNAL" | "CONFIDENTIAL" | "COHORT") =>
     prisma.opportunity.create({ data: { operatorId, title, visibility, area: "OPERATIONS", solutionType: "PROCESS_CHANGE", problem: "p", proposedSolution: "s" } });
   await opp(A, `A-conf-${tag}`, "CONFIDENTIAL");
@@ -129,12 +131,18 @@ test("login: success creates a hashed server-side session; token resolves to the
   assert.equal(await userForToken(r.token), null);
 });
 
-test("login: wrong password, deactivated user and unlinked operator are refused with the same message", async () => {
-  for (const [email, pw] of [[emails.b, "wrong-password-123"], [emails.inactive, PW], [emails.unlinked, PW], [`nobody-${tag}@test.example`, PW]]) {
+test("login: wrong password, deactivated user and unknown email are refused with the same message", async () => {
+  for (const [email, pw] of [[emails.b, "wrong-password-123"], [emails.inactive, PW], [emails.unlinked, "wrong-password-123"], [`nobody-${tag}@test.example`, PW]]) {
     const r = await attemptLogin(email, pw);
     assert.equal(r.ok, false);
     if (!r.ok) assert.equal(r.error, "Email or password is incorrect.");
   }
+});
+
+test("login: an operator with no active business is refused (only after the right password)", async () => {
+  const r = await attemptLogin(emails.unlinked, PW);
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.match(r.error, /business account is not active/);
 });
 
 test("login: repeated failures lock the account temporarily", async () => {

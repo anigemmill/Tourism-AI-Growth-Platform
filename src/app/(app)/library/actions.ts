@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -40,7 +40,7 @@ function statusRule(d: z.infer<typeof schema>): string | null {
 }
 
 export async function createAsset(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("library.edit");
   const parsed = parseForm(schema.extend({ instructions: f.str() }), fd);
   if (parsed.error) return parsed.error;
   const err = statusRule(parsed.data);
@@ -60,7 +60,7 @@ export async function createAsset(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function updateAsset(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("library.edit");
   const parsed = parseForm(schema, fd);
   if (parsed.error) return parsed.error;
   const err = statusRule(parsed.data);
@@ -76,7 +76,7 @@ export async function updateAsset(id: string, _: ActionState, fd: FormData): Pro
 }
 
 export async function addVersion(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("library.edit");
   const parsed = parseForm(z.object({ instructions: f.str(), changeNote: f.str() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -93,7 +93,7 @@ export async function addVersion(id: string, _: ActionState, fd: FormData): Prom
 }
 
 export async function setUsage(assetId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("library.edit");
   const parsed = parseForm(z.object({ operatorId: f.str(), status: z.enum(["piloting", "in use", "stopped"]), notes: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {

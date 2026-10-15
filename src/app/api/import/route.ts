@@ -31,9 +31,9 @@ const metaSchema = z.object({
 // docs/ARCHITECTURE.md §6.
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (session.role !== "PARTNER" && session.role !== "ADMIN") {
+  if (!session.canManage) {
     return NextResponse.json(
-      { error: "Importing data requires a PARTNER or ADMIN session." },
+      { error: "Importing data requires the “Import data & run connectors” permission." },
       { status: 403 }
     );
   }

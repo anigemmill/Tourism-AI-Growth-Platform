@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -66,7 +66,7 @@ function rules(d: z.infer<typeof schema>): string | null {
 }
 
 export async function createExperiment(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("experiments.edit");
   const parsed = parseForm(schema, fd);
   if (parsed.error) return parsed.error;
   const err = rules(parsed.data);
@@ -83,7 +83,7 @@ export async function createExperiment(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function updateExperiment(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("experiments.edit");
   const parsed = parseForm(schema, fd);
   if (parsed.error) return parsed.error;
   const err = rules(parsed.data);

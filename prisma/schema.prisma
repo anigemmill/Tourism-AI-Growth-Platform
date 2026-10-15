@@ -632,10 +632,35 @@ model ScenarioQuery {
 // models above are retained as the foundation for the future Rotorua Pulse.
 // ===========================================================================
 
+// Display names live in src/lib/labels.ts. Default permissions per role
+// live in src/lib/rbac/permissions.ts and can be overridden per role
+// (RolePermission) and per user (UserPermission) by a super admin.
 enum UserRole {
-  FOUNDER // programme founder — full access incl. commercial
-  ADMIN // programme administrator — full delivery access, no commercial
-  OPERATOR // participating operator — own business + cohort-shared content only
+  FOUNDER // "Super Admin" — everything, always; cannot be restricted
+  ADMIN // "Platform Staff" — programme delivery, business directory, audit
+  PROGRAMME_MANAGER // "Programme Manager" — programme delivery
+  ANALYST // "Read-only / Analyst" — reads programme data, changes nothing
+  OPERATOR // "Tourism Operator" — own linked business(es) + cohort-shared content only
+}
+
+enum UserStatus {
+  PENDING // invited; has not set a password yet
+  ACTIVE
+  SUSPENDED // temporarily blocked; can be reactivated
+  ARCHIVED // deactivated
+}
+
+enum AuthTokenPurpose {
+  INVITE
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+enum BusinessAccountStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
 }
 
 // Who can see a record. Enforced server-side in src/lib/authz.ts.
@@ -831,33 +856,99 @@ enum Severity {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  role         UserRole
-  passwordHash String
-  operatorId   String? // required for OPERATOR role
-  operator     Operator? @relation(fields: [operatorId], references: [id])
-  active       Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String
+  role              UserRole
+  passwordHash      String? // null until an invited user sets a password
+  // OPERATOR users: the business they are currently working in. Must be one
+  // of their memberships (UserBusiness); checked on every request.
+  operatorId        String?
+  operator          Operator?  @relation(fields: [operatorId], references: [id])
+  status            UserStatus @default(ACTIVE)
+  emailVerifiedAt   DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
-  sessions      AuthSession[]
-  ownedOpps     Opportunity[] @relation("OpportunityOwner")
-  assignedTasks Task[]        @relation("TaskAssignee")
-  auditLogs     AuditLog[]
+  sessions        AuthSession[]
+  ownedOpps       Opportunity[]        @relation("OpportunityOwner")
+  assignedTasks   Task[]               @relation("TaskAssignee")
+  auditLogs       AuditLog[]
+  businesses      UserBusiness[]
+  permissions     UserPermission[]
+  authTokens      AuthToken[]          @relation("TokenUser")
+  issuedTokens    AuthToken[]          @relation("TokenIssuer")
+  billingRecorded BillingTransaction[]
+}
+
+// Many-to-many link between users and businesses (Operator).
+model UserBusiness {
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operatorId       String
+  operator         Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  isPrimaryContact Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@id([userId, operatorId])
+  @@index([operatorId])
+}
+
+// Per-role overrides of the code defaults in src/lib/rbac/permissions.ts.
+// Ignored for FOUNDER (super admins always hold every permission).
+model RolePermission {
+  role        UserRole
+  permission  String
+  granted     Boolean
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@id([role, permission])
+}
+
+// Per-user grant/deny on top of the role's permissions.
+model UserPermission {
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  String
+  granted     Boolean
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@id([userId, permission])
+}
+
+// Single-use, time-limited tokens for invitations, password resets and
+// email verification. Only a SHA-256 hash of the token is stored.
+model AuthToken {
+  id          String           @id @default(cuid())
+  purpose     AuthTokenPurpose
+  tokenHash   String           @unique
+  userId      String
+  user        User             @relation("TokenUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?            @relation("TokenIssuer", fields: [createdById], references: [id], onDelete: SetNull)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, purpose])
 }
 
 // Server-side session: only a SHA-256 hash of the cookie token is stored.
 model AuthSession {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  userAgent String?
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ipAddress  String?
 
   @@index([userId])
 }
@@ -980,6 +1071,10 @@ model Operator {
   dataRetentionNotes    String?
   culturalGuidance      String? // who holds authority over cultural content; what must not go into AI tools
 
+  // Platform account (Admin & Access Management)
+  accountStatus BusinessAccountStatus @default(ACTIVE)
+  cohort        String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1004,6 +1099,25 @@ model Operator {
   competitors   Competitor[]
   contentBriefs ContentBrief[]
   profile       OperatorProfile?
+  members       UserBusiness[]
+  features      BusinessFeature[]
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  billingTxns   BillingTransaction[]
+  billingEvents BillingEvent[]
+}
+
+// Portal modules enabled for a business. Keys: src/lib/rbac/features.ts.
+// A missing row means the feature's default applies.
+model BusinessFeature {
+  operatorId  String
+  operator    Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  feature     String
+  enabled     Boolean
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@id([operatorId, feature])
 }
 
 // ---------------------------------------------------------------------------
@@ -1715,4 +1829,140 @@ enum ContentBriefStatus {
   IN_PROGRESS
   PUBLISHED
   REJECTED
+}
+
+// ===========================================================================
+// BILLING — see docs/BILLING.md. No payment provider is integrated yet: every
+// record created in the app is source MANUAL and is labelled as manually
+// recorded. PROVIDER records may only be written by a verified provider
+// integration. No card numbers or payment credentials are ever stored.
+// Amounts are integer minor units (cents).
+// ===========================================================================
+
+enum BillingSource {
+  MANUAL // entered by an administrator — not confirmed by a payment provider
+  PROVIDER // confirmed by a payment provider (webhook / API) — not settable in the UI
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+}
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  ONE_OFF
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum BillingTxnKind {
+  PAYMENT // money received
+  REFUND // money returned
+  CREDIT // adjustment reducing what is owed
+  CHARGE // adjustment increasing what is owed
+}
+
+enum BillingTxnStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model Subscription {
+  id                      String             @id @default(cuid())
+  operatorId              String
+  operator                Operator           @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  plan                    String
+  status                  SubscriptionStatus @default(ACTIVE)
+  interval                BillingInterval    @default(MONTHLY)
+  amountCents             Int
+  currency                String             @default("NZD")
+  currentPeriodStart      DateTime?
+  renewalDate             DateTime?
+  cancelledAt             DateTime?
+  source                  BillingSource      @default(MANUAL)
+  providerCustomerRef     String?
+  providerSubscriptionRef String?
+  notes                   String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  invoices Invoice[]
+
+  @@index([operatorId])
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  operatorId     String
+  operator       Operator      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  number         String        @unique
+  status         InvoiceStatus @default(OPEN)
+  amountCents    Int
+  currency       String        @default("NZD")
+  issuedAt       DateTime
+  dueAt          DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  source         BillingSource @default(MANUAL)
+  providerRef    String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  transactions BillingTransaction[]
+
+  @@index([operatorId])
+  @@index([status])
+}
+
+model BillingTransaction {
+  id                     String           @id @default(cuid())
+  operatorId             String
+  operator               Operator         @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  invoiceId              String?
+  invoice                Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  kind                   BillingTxnKind
+  status                 BillingTxnStatus
+  amountCents            Int // always positive; kind gives the direction
+  currency               String           @default("NZD")
+  occurredAt             DateTime
+  source                 BillingSource    @default(MANUAL)
+  method                 String? // e.g. "bank transfer" — never card details
+  providerTransactionRef String?
+  failureReason          String?
+  note                   String?
+  recordedById           String?
+  recordedBy             User?            @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt              DateTime         @default(now())
+
+  @@index([operatorId, occurredAt])
+  @@index([status])
+}
+
+// Timeline of billing changes and admin notes for a business.
+model BillingEvent {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  type       String // "note" | "subscription.created" | "invoice.created" | "transaction.recorded" ...
+  summary    String
+  actorId    String?
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, createdAt])
 }

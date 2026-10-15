@@ -1,10 +1,10 @@
 import { Badge, Card, EmptyState, PageHeader, Table, WorkStatusBadge } from "@/components/ui";
-import { requireUser } from "@/lib/auth/session";
+import { requireOperatorFeature } from "@/lib/auth/portal";
 import { portalDirectory, portalInitiatives, portalLearnings, portalResources, portalWorkshops } from "@/lib/dal/portal";
 import { formatDate, formatShortDate } from "@/lib/format";
 
 export default async function PortalCollective() {
-  const user = await requireUser();
+  const { user } = await requireOperatorFeature("portal.collective");
   const actor = { id: user.id, role: user.role, operatorId: user.operatorId };
   const [workshops, directory, learnings, resources, initiatives] = await Promise.all([
     portalWorkshops(actor), portalDirectory(actor), portalLearnings(actor), portalResources(actor), portalInitiatives(actor),

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ActionForm, Badge, ButtonLink, Card, Checkbox, ExperimentStatusBadge, FormGrid, Notice, OppStatusBadge, PageHeader, Select, Table, TextArea, TextField, WorkStatusBadge } from "@/components/ui";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { staffOptions } from "@/lib/queries";
 import { WORK_STATUS_LABELS, options } from "@/lib/labels";
@@ -11,7 +11,7 @@ import { formatNum, formatNzd } from "@/lib/format";
 import { updateInitiative, upsertParticipant } from "../../actions";
 
 export default async function InitiativePage({ params }: PageProps<"/collective/initiatives/[id]">) {
-  await requireStaff();
+  await requirePermission("collective.view");
   const { id } = await params;
   const i = await prisma.sharedInitiative.findUnique({
     where: { id },

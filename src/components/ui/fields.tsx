@@ -164,3 +164,16 @@ export function FormSection({ title, description, children }: { title: string; d
     </fieldset>
   );
 }
+
+/**
+ * Required confirmation for destructive or high-impact actions. Checked on
+ * the server too (see `confirmed` in src/lib/forms.ts).
+ */
+export function ConfirmBox({ children, required = true }: { children: ReactNode; required?: boolean }) {
+  return (
+    <label className="flex items-start gap-2 text-xs text-muted">
+      <input type="checkbox" name="confirm" value="yes" required={required} className="mt-0.5 h-4 w-4 shrink-0 rounded border-line-strong accent-[var(--brand)]" />
+      <span>{children}</span>
+    </label>
+  );
+}

@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
+import type { Permission } from "@/lib/rbac/permissions";
+
+const EDIT_PERMISSION: Record<string, Permission> = {
+  opportunity: "opportunities.edit",
+  experiment: "experiments.edit",
+  project: "work.edit",
+};
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, type ActionState } from "@/lib/forms";
@@ -21,7 +28,7 @@ export async function addEvidence(
   _: ActionState,
   fd: FormData
 ): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission(EDIT_PERMISSION[target.entityType] ?? "operators.edit");
   const parsed = parseForm(schema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {

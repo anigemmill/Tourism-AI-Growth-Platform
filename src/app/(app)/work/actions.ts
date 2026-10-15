@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -27,7 +27,7 @@ const taskSchema = z.object({
 });
 
 export async function createTask(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("work.edit");
   const parsed = parseForm(taskSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -41,7 +41,7 @@ export async function createTask(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function setTaskStatus(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("work.edit");
   const status = WORK.safeParse(fd.get("status"));
   if (!status.success) return { error: "Invalid status" };
   return guarded(async () => {
@@ -76,7 +76,7 @@ const projectSchema = z.object({
 });
 
 export async function createProject(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("work.edit");
   const parsed = parseForm(projectSchema, fd);
   if (parsed.error) return parsed.error;
   let id = "";
@@ -95,7 +95,7 @@ export async function createProject(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function updateProject(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("work.edit");
   const parsed = parseForm(projectSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {

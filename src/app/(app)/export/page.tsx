@@ -1,10 +1,11 @@
 import { Badge, ButtonLink, Card, Notice, PageHeader, Table } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
-import { EXPORTS, type ExportKey } from "@/lib/export";
+import { requirePermission } from "@/lib/auth/session";
+import { EXPORTS, exportableKeys, exportPermission } from "@/lib/export";
+import { PERMISSIONS } from "@/lib/rbac/permissions";
 
 export default async function ExportPage() {
-  const user = await requireStaff();
-  const keys = (Object.keys(EXPORTS) as ExportKey[]).filter((k) => !EXPORTS[k].founderOnly || user.role === "FOUNDER");
+  const user = await requirePermission("data.export");
+  const keys = exportableKeys(user.permissions);
   return (
     <div>
       <PageHeader eyebrow="Governance" title="Data export" description="Everything needed to keep running the programme outside this application — the low-tech fallback. Exports are logged." actions={<ButtonLink href="/api/export?entity=all" variant="primary">Download everything (JSON)</ButtonLink>} />
@@ -16,7 +17,7 @@ export default async function ExportPage() {
             {keys.map((k) => (
               <tr key={k}>
                 <td className="font-medium">{EXPORTS[k].label}</td>
-                <td>{EXPORTS[k].founderOnly && <Badge tone="outline">Founder only</Badge>}</td>
+                <td>{exportPermission(k) && <Badge tone="outline">Needs “{PERMISSIONS[exportPermission(k)!].label}”</Badge>}</td>
                 <td className="space-x-3 text-right text-sm"><a className="text-accent hover:underline" href={`/api/export?entity=${k}&format=csv`}>CSV</a><a className="text-accent hover:underline" href={`/api/export?entity=${k}&format=json`}>JSON</a></td>
               </tr>
             ))}

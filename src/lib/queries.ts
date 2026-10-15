@@ -15,7 +15,7 @@ export async function operatorOptions() {
 
 export async function staffOptions() {
   const users = await prisma.user.findMany({
-    where: { role: { in: ["FOUNDER", "ADMIN"] }, active: true },
+    where: { role: { in: ["FOUNDER", "ADMIN", "PROGRAMME_MANAGER"] }, status: "ACTIVE" },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

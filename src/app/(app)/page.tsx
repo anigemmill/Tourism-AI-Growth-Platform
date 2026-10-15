@@ -2,7 +2,9 @@ import Link from "next/link";
 import {
   Badge, ButtonLink, Card, EmptyState, HorizonBadge, IllustrativeBadge, Notice, PageHeader, SeverityBadge, Stat, Table,
 } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import { can, requireStaff } from "@/lib/auth/session";
+import { staffHome } from "@/lib/nav";
 import { prisma } from "@/lib/prisma";
 import { activeProgramme } from "@/lib/queries";
 import { programmePhaseLabel, programmeWeek, stageForWeek, weekStart } from "@/lib/domain/programme";
@@ -37,6 +39,7 @@ const IconFileText = () => (
 
 export default async function DashboardPage() {
   const user = await requireStaff();
+  if (!can(user, "dashboard.programme")) redirect(staffHome(user.permissions));
   const now = new Date();
   const programme = await activeProgramme();
 
@@ -64,8 +67,8 @@ export default async function DashboardPage() {
     prisma.experiment.findMany({ include: { operator: { select: { name: true } }, initiative: { select: { title: true } } } }),
     prisma.opportunity.findMany({ where: { status: { notIn: ["CLOSED", "REJECTED"] } }, include: { operator: { select: { name: true } } } }),
     prisma.growthBrief.count({ where: { status: "DRAFT" } }),
-    user.role === "FOUNDER" ? prisma.deal.findMany({ include: { payments: true } }) : Promise.resolve([]),
-    user.role === "FOUNDER" ? prisma.costItem.findMany() : Promise.resolve([]),
+    can(user, "commercial.view") ? prisma.deal.findMany({ include: { payments: true } }) : Promise.resolve([]),
+    can(user, "commercial.view") ? prisma.costItem.findMany() : Promise.resolve([]),
     prisma.operator.count({ where: { isSynthetic: true } }),
   ]);
 
@@ -86,7 +89,7 @@ export default async function DashboardPage() {
     .map((e) => ({ e, ev: evaluateExperiment({ ...e, hasIllustrativeData: e.isIllustrative }) }));
   const horizonCounts = (["NOW", "NEXT", "LATER", "IGNORE"] as const).map((h) => ({ h, n: opps.filter((o) => o.horizon === h).length }));
   const topNow = opps.filter((o) => o.horizon === "NOW").sort((a, b) => priorityScore(b) - priorityScore(a)).slice(0, 5);
-  const commercial = user.role === "FOUNDER" ? summarise(deals, costs, programme?.totalWeeks ? Math.ceil(programme.totalWeeks / 4.33) : 3) : null;
+  const commercial = can(user, "commercial.view") ? summarise(deals, costs, programme?.totalWeeks ? Math.ceil(programme.totalWeeks / 4.33) : 3) : null;
   const commercialIllustrative = deals.some((d) => d.isIllustrative) || costs.some((c) => c.isIllustrative);
 
   const attention = overdueTasks.length + risks.length + decisionsDue.filter((d) => d.reviewDate && d.reviewDate <= new Date(now.getTime() + 7 * 86400000)).length + overdueMilestones.length;

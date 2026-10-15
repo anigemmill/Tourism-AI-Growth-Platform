@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Badge, ButtonLink, Card, DecisionBadge, EmptyState, ExperimentStatusBadge, IllustrativeBadge, PageHeader, Table } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { evaluateExperiment, VERDICT_LABELS } from "@/lib/domain/experiments";
 import { COMPARISON_LABELS, METRIC_LABELS } from "@/lib/labels";
 import { formatShortDate } from "@/lib/format";
 
 export default async function ExperimentsPage() {
-  await requireStaff();
+  await requirePermission("experiments.view");
   const rows = await prisma.experiment.findMany({ orderBy: [{ status: "asc" }, { startDate: "asc" }], include: { operator: { select: { name: true } }, initiative: { select: { title: true } } } });
   return (
     <div>

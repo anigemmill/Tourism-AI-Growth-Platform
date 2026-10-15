@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { ReportView } from "@/components/ReportView";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { operatorReport } from "@/lib/reports/build";
 
 export default async function Page({ params }: PageProps<"/reports/operator/[id]">) {
-  await requireStaff();
+  await requirePermission("reports.view");
   const { id } = await params;
   const report = await operatorReport(id);
   if (!report) notFound();

@@ -1,3 +1,4 @@
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getCurrentDestination } from "@/lib/destination";
 import { getSession } from "@/lib/session";
@@ -5,6 +6,7 @@ import { Card, SectionHeading, EmptyState } from "@/components/ui";
 import { ScenarioForm } from "@/components/ScenarioForm";
 
 export default async function ScenarioPage() {
+  await requirePermission("destination.view");
   const session = await getSession();
   const destination = await getCurrentDestination();
   const history = destination

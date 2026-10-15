@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireFounder } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -31,7 +31,7 @@ function dealRules(d: z.infer<typeof dealSchema>): string | null {
 }
 
 export async function createDeal(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   const parsed = parseForm(dealSchema, fd);
   if (parsed.error) return parsed.error;
   const err = dealRules(parsed.data);
@@ -45,7 +45,7 @@ export async function createDeal(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function updateDeal(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   const parsed = parseForm(dealSchema, fd);
   if (parsed.error) return parsed.error;
   const err = dealRules(parsed.data);
@@ -62,7 +62,7 @@ export async function updateDeal(id: string, _: ActionState, fd: FormData): Prom
 }
 
 export async function addPayment(dealId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   const parsed = parseForm(z.object({ amountNzd: z.coerce.number().positive(), receivedAt: f.date(), reference: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -77,7 +77,7 @@ export async function addPayment(dealId: string, _: ActionState, fd: FormData): 
 }
 
 export async function addCost(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   const parsed = parseForm(
     z.object({
       description: f.str(), category: z.enum(["DELIVERY_LABOUR", "CONTRACTOR", "SOFTWARE", "TRAVEL", "VENUE", "OTHER"]),
@@ -114,7 +114,7 @@ const scenarioSchema = z.object({
 });
 
 export async function saveScenario(id: string | null, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   const parsed = parseForm(scenarioSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -127,7 +127,7 @@ export async function saveScenario(id: string | null, _: ActionState, fd: FormDa
 }
 
 export async function deleteScenario(id: string): Promise<ActionState> {
-  const user = await requireFounder();
+  const user = await requirePermission("commercial.edit");
   return guarded(async () => {
     const s = await prisma.pricingScenario.delete({ where: { id } });
     await audit(user.id, "delete", "pricing_scenario", id, `Deleted scenario ${s.name}`);

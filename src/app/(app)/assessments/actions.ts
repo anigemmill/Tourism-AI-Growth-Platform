@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { AssessmentArea } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, type ActionState } from "@/lib/forms";
@@ -17,7 +17,7 @@ const headerSchema = z.object({
 const areaSchema = z.object({ score: f.optInt(1, 5), observed: f.optStr(), reported: f.optStr(), notes: f.optStr() });
 
 export async function saveAssessment(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("assessments.edit");
   const header = headerSchema.safeParse({
     status: fd.get("status"),
     summary: fd.get("summary"),

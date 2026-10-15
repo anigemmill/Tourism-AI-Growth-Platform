@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { visibilityChangeError } from "@/lib/authz";
@@ -20,7 +20,7 @@ const workshopSchema = z.object({
 });
 
 export async function createWorkshop(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(workshopSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -34,7 +34,7 @@ export async function createWorkshop(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function updateWorkshop(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(workshopSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -47,7 +47,7 @@ export async function updateWorkshop(id: string, _: ActionState, fd: FormData): 
 
 /** Attendance grid: one checkbox + engagement per operator. */
 export async function saveAttendance(workshopId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   return guarded(async () => {
     const w = await prisma.workshop.findUniqueOrThrow({ where: { id: workshopId } });
     const ops = await prisma.operator.findMany({ where: { programmeId: w.programmeId }, select: { id: true } });
@@ -78,7 +78,7 @@ const learningSchema = z.object({
 });
 
 export async function createLearning(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(learningSchema, fd);
   if (parsed.error) return parsed.error;
   const d = parsed.data;
@@ -95,7 +95,7 @@ export async function createLearning(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function setLearningVisibility(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(z.object({ visibility: VIS, culturalReview: CULT, culturalApprovedBy: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -111,7 +111,7 @@ export async function setLearningVisibility(id: string, _: ActionState, fd: Form
 }
 
 export async function createResource(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(z.object({ title: f.str(), description: f.optStr(), url: f.url(), resourceType: f.str(), visibility: VIS, culturalReview: CULT }), fd);
   if (parsed.error) return parsed.error;
   if (parsed.data.culturalReview === "REQUIRED" && parsed.data.visibility !== "INTERNAL") return { error: "Resources needing cultural review stay internal until approved." };
@@ -128,7 +128,7 @@ const initiativeSchema = z.object({
 });
 
 export async function createInitiative(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(initiativeSchema, fd);
   if (parsed.error) return parsed.error;
   let id = "";
@@ -144,7 +144,7 @@ export async function createInitiative(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function updateInitiative(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(initiativeSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -156,7 +156,7 @@ export async function updateInitiative(id: string, _: ActionState, fd: FormData)
 }
 
 export async function upsertParticipant(initiativeId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("collective.edit");
   const parsed = parseForm(
     z.object({
       operatorId: f.str(), role: f.optStr(), responsibilities: f.optStr(), attributedBookings: f.optInt(0, 1_000_000),

@@ -11,9 +11,9 @@ const MAX_RUNS = 5;
 
 export async function POST() {
   const session = await getSession();
-  if (session.role !== "PARTNER" && session.role !== "ADMIN") {
+  if (!session.canManage) {
     return NextResponse.json(
-      { error: "Running the AI Discovery Engine requires a PARTNER or ADMIN session." },
+      { error: "Running the AI Discovery Engine requires the “Import data & run connectors” permission." },
       { status: 403 }
     );
   }

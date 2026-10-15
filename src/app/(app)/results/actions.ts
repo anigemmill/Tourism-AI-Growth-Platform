@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, type ActionState } from "@/lib/forms";
@@ -29,7 +29,7 @@ const rowSchema = z.object({
 });
 
 export async function addMeasurement(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("results.edit");
   const parsed = parseForm(rowSchema.extend({ operatorId: f.str(), experimentId: f.optId() }), fd);
   if (parsed.error) return parsed.error;
   const d = parsed.data;
@@ -52,7 +52,7 @@ export async function addMeasurement(_: ActionState, fd: FormData): Promise<Acti
  * All-or-nothing: any invalid row rejects the whole import with line numbers.
  */
 export async function importMeasurements(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("results.edit");
   const operatorId = String(fd.get("operatorId") ?? "");
   const csv = String(fd.get("csv") ?? "").trim();
   if (!operatorId) return { error: "Choose the operator this data belongs to." };

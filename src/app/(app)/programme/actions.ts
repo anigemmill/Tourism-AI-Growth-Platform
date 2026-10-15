@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, type ActionState } from "@/lib/forms";
 import { validateStages } from "@/lib/domain/programme";
 
 export async function updateProgramme(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("programme.edit");
   const parsed = parseForm(z.object({ name: f.str(), description: f.optStr(), startDate: f.date(), totalWeeks: f.int(1, 52) }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -25,7 +25,7 @@ export async function updateProgramme(id: string, _: ActionState, fd: FormData):
 }
 
 export async function updateStages(programmeId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("programme.edit");
   return guarded(async () => {
     const p = await prisma.programme.findUniqueOrThrow({ where: { id: programmeId }, include: { stages: true } });
     const next = p.stages.map((s) => ({
@@ -46,7 +46,7 @@ export async function updateStages(programmeId: string, _: ActionState, fd: Form
 }
 
 export async function addMilestone(programmeId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("programme.edit");
   const parsed = parseForm(z.object({ title: f.str(), week: f.int(1, 52), notes: f.optStr() }), fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -58,7 +58,7 @@ export async function addMilestone(programmeId: string, _: ActionState, fd: Form
 }
 
 export async function setMilestoneStatus(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("programme.edit");
   const status = z.enum(["TODO", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]).safeParse(fd.get("status"));
   if (!status.success) return { error: "Invalid status" };
   return guarded(async () => {

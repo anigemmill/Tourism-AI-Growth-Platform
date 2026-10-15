@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, Badge, Card, DefinitionList, FormGrid, PageHeader, Select, Table, TextArea, TextField, WorkflowKindBadge, WorkflowStatusBadge } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions } from "@/lib/queries";
 import { CULTURAL_LABELS } from "@/lib/labels";
@@ -10,7 +10,7 @@ import { addVersion, setUsage, updateAsset } from "../actions";
 import { AssetFields } from "../AssetFields";
 
 export default async function AssetPage({ params }: PageProps<"/library/[id]">) {
-  await requireStaff();
+  await requirePermission("library.view");
   const { id } = await params;
   const a = await prisma.workflowAsset.findUnique({
     where: { id },

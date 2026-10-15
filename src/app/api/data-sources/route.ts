@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 export async function GET() {
   // Previously unauthenticated. Destination data registry is staff-only.
   const session = await getSession();
-  if (session.role !== "ADMIN") {
+  if (session.role !== "ADMIN" && session.role !== "PARTNER") {
     return NextResponse.json({ error: "Programme staff only." }, { status: 403 });
   }
   const destinationConfig = getActiveDestinationConfig();

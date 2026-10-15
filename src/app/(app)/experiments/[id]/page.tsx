@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Card, DecisionBadge, ExperimentStatusBadge, IllustrativeBadge, Notice, PageHeader, Stat, Table, VisibilityBadge } from "@/components/ui";
 import { EvidencePanel } from "@/components/EvidencePanel";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions } from "@/lib/queries";
 import { opportunityOptions } from "@/lib/opportunityOptions";
@@ -14,7 +14,7 @@ import { updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 export default async function ExperimentPage({ params }: PageProps<"/experiments/[id]">) {
-  await requireStaff();
+  await requirePermission("experiments.view");
   const { id } = await params;
   const e = await prisma.experiment.findUnique({
     where: { id },

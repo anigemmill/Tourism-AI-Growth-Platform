@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ButtonLink, Card, EmptyState, Notice, PageHeader, Table, WorkflowKindBadge, WorkflowStatusBadge } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export default async function LibraryPage() {
-  await requireStaff();
+  await requirePermission("library.view");
   const rows = await prisma.workflowAsset.findMany({ orderBy: [{ status: "desc" }, { name: "asc" }], include: { _count: { select: { usages: true, versions: true } } } });
   return (
     <div>

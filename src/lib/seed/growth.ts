@@ -317,7 +317,7 @@ async function seedDemoCohort(
   const opPw = demoPassword || genPassword();
   for (const n of [0, 1]) {
     const email = `operator${n + 1}@demo.example`;
-    await prisma.user.create({ data: { email, name: `${created[n].name} (operator)`, role: "OPERATOR", operatorId: opId(n), passwordHash: await hashPassword(opPw) } });
+    await prisma.user.create({ data: { email, name: `${created[n].name} (operator)`, role: "OPERATOR", operatorId: opId(n), passwordHash: await hashPassword(opPw), businesses: { create: { operatorId: opId(n), isPrimaryContact: true } } } });
     credentials.push(`OPERATOR ${email}  ${demoPassword ? "(SEED_DEMO_PASSWORD)" : opPw}  → ${created[n].name}`);
   }
 

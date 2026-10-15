@@ -1,12 +1,12 @@
 import { Card, PageHeader } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions, staffOptions } from "@/lib/queries";
 import { createOpportunity } from "../actions";
 import { OpportunityForm } from "../OpportunityForm";
 
 export default async function NewOpportunityPage({ searchParams }: PageProps<"/opportunities/new">) {
-  await requireStaff();
+  await requirePermission("opportunities.edit");
   const sp = await searchParams;
   const s = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
   const [operatorOpts, initiativeOpts, staffOpts, templates] = await Promise.all([

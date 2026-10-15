@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   ActionForm, Badge, Card, Checkbox, EmptyState, FormGrid, PageHeader, Select, Table, Tabs, TextArea, TextField, VisibilityBadge, WorkStatusBadge,
 } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { activeProgramme, operatorOptions, initiativeOptions } from "@/lib/queries";
 import { weekStart } from "@/lib/domain/programme";
@@ -13,7 +13,7 @@ import { createInitiative, createLearning, createResource, createWorkshop, setLe
 const TABS = ["workshops", "initiatives", "learnings", "resources", "engagement"] as const;
 
 export default async function CollectivePage({ searchParams }: PageProps<"/collective">) {
-  await requireStaff();
+  await requirePermission("collective.view");
   const requested = (await searchParams).tab;
   const tab = TABS.find((t) => t === requested) ?? "workshops";
   const programme = await activeProgramme();

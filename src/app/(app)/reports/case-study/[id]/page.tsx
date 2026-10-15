@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { ReportView } from "@/components/ReportView";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { caseStudyDraft } from "@/lib/reports/build";
 
 export default async function Page({ params }: PageProps<"/reports/case-study/[id]">) {
-  await requireStaff();
+  await requirePermission("reports.view");
   const { id } = await params;
   const result = await caseStudyDraft(id);
   const report = result && "blocked" in result ? result.report : result;

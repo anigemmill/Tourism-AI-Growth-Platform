@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ActionForm, Badge, Card, EmptyState, FormGrid, Notice, PageHeader, Select, Table, TextArea, TextField, Tabs } from "@/components/ui";
 import { BriefView } from "@/components/BriefView";
 import { ClaimBadge, CLAIM_LABELS } from "@/components/ClaimBadge";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { CONFIDENCE_LABELS, CONTENT_BRIEF_STATUS_LABELS, CONTENT_TYPE_LABELS, VISIBILITY_LABELS, options } from "@/lib/labels";
 import { INTEGRATION_REGISTRY, INTEGRATION_STATUS_LABELS, effectiveStatus } from "@/lib/integrations/registry";
@@ -25,7 +25,7 @@ const CONTENT_BRIEF_TRANSITIONS: Record<string, { next: string; label: string }[
 const SIGNAL_TYPES = ["DEMAND", "ENQUIRY", "REVIEW", "AI_DISCOVERY", "COMPETITOR", "MARKET", "OPERATIONS"].map((v) => ({ value: v, label: v.replace("_", " ").toLowerCase() }));
 
 export default async function IntelligencePage({ params }: PageProps<"/operators/[id]/intelligence">) {
-  await requireStaff();
+  await requirePermission("operators.view");
   const { id } = await params;
   const op = await prisma.operator.findUnique({
     where: { id },

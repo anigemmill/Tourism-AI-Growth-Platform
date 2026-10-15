@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
@@ -43,7 +43,7 @@ const governanceSchema = z.object({
 });
 
 export async function createOperator(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(operatorSchema, fd);
   if (parsed.error) return parsed.error;
   let id = "";
@@ -60,7 +60,7 @@ export async function createOperator(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function updateOperator(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(operatorSchema, fd);
   if (parsed.error) return parsed.error;
   const res = await guarded(async () => {
@@ -76,7 +76,7 @@ export async function updateOperator(id: string, _: ActionState, fd: FormData): 
 }
 
 export async function updateGovernance(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(governanceSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -90,7 +90,7 @@ export async function updateGovernance(id: string, _: ActionState, fd: FormData)
 }
 
 export async function startAssessment(operatorId: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   let id = "";
   const res = await guarded(async () => {
     const a = await prisma.assessment.create({

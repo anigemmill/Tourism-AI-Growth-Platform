@@ -1,9 +1,11 @@
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getCurrentDestination } from "@/lib/destination";
 import { Card, SectionHeading, EmptyState, Badge } from "@/components/ui";
 import { ACCESS_LEVEL_LABELS, CONFIDENCE_LABELS } from "@/lib/governance";
 
 export default async function VisitorsPage() {
+  await requirePermission("destination.view");
   const destination = await getCurrentDestination();
   const metrics = destination
     ? await prisma.visitorMetric.findMany({

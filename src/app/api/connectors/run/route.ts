@@ -10,9 +10,9 @@ const MAX_RUNS = 10;
 
 export async function POST() {
   const session = await getSession();
-  if (session.role !== "PARTNER" && session.role !== "ADMIN") {
+  if (!session.canManage) {
     return NextResponse.json(
-      { error: "Running connectors requires a PARTNER or ADMIN session." },
+      { error: "Running connectors requires the “Import data & run connectors” permission." },
       { status: 403 }
     );
   }

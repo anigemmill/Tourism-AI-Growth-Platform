@@ -4,7 +4,8 @@ import type {
   AssessmentArea, AssessmentStatus, ComparisonMethod, ConfidenceLevel, ContentBriefStatus, ContentType, CostCategory,
   CulturalReview, DealStage, DealType, Decision, EvidenceKind, ExperimentStatus, Horizon, MetricKey, OperatorStatus,
   OpportunityStatus, RiskKind, Severity, SolutionType, UserRole, Visibility, WorkStatus, WorkflowKind,
-  WorkflowStatus,
+  WorkflowStatus, UserStatus, BusinessAccountStatus, SubscriptionStatus, BillingInterval, InvoiceStatus, BillingTxnKind,
+  BillingTxnStatus, BillingSource,
 } from "@/generated/prisma";
 
 export const AREA_LABELS: Record<AssessmentArea, string> = {
@@ -157,7 +158,39 @@ export const CONTENT_BRIEF_STATUS_LABELS: Record<ContentBriefStatus, string> = {
 
 export const RISK_KIND_LABELS: Record<RiskKind, string> = { RISK: "Risk", BLOCKER: "Blocker", ISSUE: "Issue" };
 export const SEVERITY_LABELS: Record<Severity, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Critical" };
-export const ROLE_LABELS: Record<UserRole, string> = { FOUNDER: "Founder", ADMIN: "Programme admin", OPERATOR: "Operator" };
+export const ROLE_LABELS: Record<UserRole, string> = {
+  FOUNDER: "Super Admin",
+  ADMIN: "Platform Staff",
+  PROGRAMME_MANAGER: "Programme Manager",
+  ANALYST: "Read-only / Analyst",
+  OPERATOR: "Tourism Operator",
+};
+
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  FOUNDER: "Everything, including users, roles, permissions, billing and commercial. Always holds every permission.",
+  ADMIN: "Programme delivery, data import/export, audit log and the business directory. No user management, billing or commercial by default.",
+  PROGRAMME_MANAGER: "Runs programme delivery: operators, assessments, opportunities, tasks, experiments and results.",
+  ANALYST: "Reads programme data and reports. Cannot change anything.",
+  OPERATOR: "Their own linked business(es) plus content shared with the cohort, through the operator portal.",
+};
+
+export const USER_STATUS_LABELS: Record<UserStatus, string> = { PENDING: "Invited", ACTIVE: "Active", SUSPENDED: "Suspended", ARCHIVED: "Deactivated" };
+
+export const ACCOUNT_STATUS_LABELS: Record<BusinessAccountStatus, string> = { PENDING: "Pending", ACTIVE: "Active", SUSPENDED: "Suspended", ARCHIVED: "Archived" };
+
+export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  TRIALING: "Trial", ACTIVE: "Active", PAST_DUE: "Past due", PAUSED: "Paused", CANCELLED: "Cancelled",
+};
+
+export const INTERVAL_LABELS: Record<BillingInterval, string> = { MONTHLY: "Monthly", QUARTERLY: "Quarterly", ANNUAL: "Annual", ONE_OFF: "One-off" };
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = { DRAFT: "Draft", OPEN: "Open", PAID: "Paid", VOID: "Void", UNCOLLECTIBLE: "Uncollectible" };
+
+export const TXN_KIND_LABELS: Record<BillingTxnKind, string> = { PAYMENT: "Payment", REFUND: "Refund", CREDIT: "Credit adjustment", CHARGE: "Charge adjustment" };
+
+export const TXN_STATUS_LABELS: Record<BillingTxnStatus, string> = { PENDING: "Pending", SUCCEEDED: "Succeeded", FAILED: "Failed" };
+
+export const BILLING_SOURCE_LABELS: Record<BillingSource, string> = { MANUAL: "Manually recorded", PROVIDER: "Provider-confirmed" };
 
 export const OPERATOR_CATEGORIES = [
   "accommodation", "activity", "attraction", "cultural", "food-beverage", "transport", "wellness", "other",

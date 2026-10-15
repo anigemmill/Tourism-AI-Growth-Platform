@@ -1,5 +1,5 @@
 import { Card, PageHeader } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { initiativeOptions, operatorOptions } from "@/lib/queries";
 import { opportunityOptions } from "@/lib/opportunityOptions";
 import { experimentOptions } from "@/lib/experimentOptions";
@@ -7,7 +7,7 @@ import { createExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 export default async function NewExperimentPage({ searchParams }: PageProps<"/experiments/new">) {
-  await requireStaff();
+  await requirePermission("experiments.edit");
   const sp = await searchParams;
   const s = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
   const [operatorOpts, initiativeOpts, opportunityOpts, experimentOpts] = await Promise.all([operatorOptions(), initiativeOptions(), opportunityOptions(), experimentOptions()]);

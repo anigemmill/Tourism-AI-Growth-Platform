@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma";
 import { ButtonLink, Card, EmptyState, PageHeader, Progress, Table, Tabs, WorkStatusBadge } from "@/components/ui";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions, staffOptions } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/format";
 const OPEN = ["TODO", "IN_PROGRESS", "BLOCKED"] as const;
 
 export default async function WorkPage({ searchParams }: PageProps<"/work">) {
-  const user = await requireStaff();
+  const user = await requirePermission("work.view");
   const view = String((await searchParams).view ?? "open");
   const now = new Date();
   const where: Prisma.TaskWhereInput =

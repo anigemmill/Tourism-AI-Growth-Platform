@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, ButtonLink, Card, Checkbox, EvidenceBadge, HorizonBadge, Notice, PageHeader, Select, Table, TextArea } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { AREA_LABELS, ASSESSMENT_STATUS_LABELS, SOLUTION_LABELS, options } from "@/lib/labels";
 import { priorityScore } from "@/lib/domain/prioritise";
@@ -10,7 +10,7 @@ import { saveAssessment } from "../actions";
 const SCORE_OPTS = [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} — ${["Weak", "Basic", "Adequate", "Good", "Strong"][n - 1]}` }));
 
 export default async function AssessmentPage({ params }: PageProps<"/assessments/[id]">) {
-  await requireStaff();
+  await requirePermission("assessments.view");
   const { id } = await params;
   const a = await prisma.assessment.findUnique({
     where: { id },

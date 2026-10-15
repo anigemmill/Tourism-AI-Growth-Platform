@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, Card, DealStageBadge, FormGrid, IllustrativeBadge, PageHeader, Stat, Table, TextField } from "@/components/ui";
-import { requireFounder } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions } from "@/lib/queries";
 import { dealValue } from "@/lib/domain/commercial";
@@ -10,7 +10,7 @@ import { addPayment, updateDeal } from "../../actions";
 import { DealFields } from "../../DealFields";
 
 export default async function DealPage({ params }: PageProps<"/commercial/deals/[id]">) {
-  await requireFounder();
+  await requirePermission("commercial.view");
   const { id } = await params;
   const d = await prisma.deal.findUnique({ where: { id }, include: { payments: { orderBy: { receivedAt: "desc" } }, costs: true } });
   if (!d) notFound();

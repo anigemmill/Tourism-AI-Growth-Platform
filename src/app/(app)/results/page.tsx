@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ActionForm, Card, Checkbox, EmptyState, EvidenceBadge, FormGrid, IllustrativeBadge, Notice, PageHeader, Select, Table, TextArea, TextField } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions } from "@/lib/queries";
 import { compareMeasurements } from "@/lib/domain/results";
@@ -9,7 +9,7 @@ import { formatDate, formatNum, pct } from "@/lib/format";
 import { addMeasurement, importMeasurements } from "./actions";
 
 export default async function ResultsPage({ searchParams }: PageProps<"/results">) {
-  await requireStaff();
+  await requirePermission("results.view");
   const op = (await searchParams).operator;
   const operatorId = typeof op === "string" ? op : undefined;
   const [operators, operatorOpts, experiments] = await Promise.all([

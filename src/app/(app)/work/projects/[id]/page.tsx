@@ -4,7 +4,7 @@ import { Card, PageHeader, VisibilityBadge, WorkStatusBadge } from "@/components
 import { EvidencePanel } from "@/components/EvidencePanel";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions, staffOptions } from "@/lib/queries";
 import { opportunityOptions } from "@/lib/opportunityOptions";
@@ -12,7 +12,7 @@ import { updateProject } from "../../actions";
 import { ProjectForm } from "../../ProjectForm";
 
 export default async function ProjectPage({ params }: PageProps<"/work/projects/[id]">) {
-  await requireStaff();
+  await requirePermission("work.view");
   const { id } = await params;
   const p = await prisma.project.findUnique({
     where: { id },

@@ -3,7 +3,26 @@
 
 import { z } from "zod";
 
-export type ActionState = { error?: string; ok?: string; fieldErrors?: Record<string, string[]> } | undefined;
+export type ActionState =
+  | {
+      error?: string;
+      ok?: string;
+      fieldErrors?: Record<string, string[]>;
+      /** A single-use link to hand over in person (only when email is not configured). */
+      link?: string;
+    }
+  | undefined;
+
+/**
+ * High-impact admin actions must carry an explicit confirmation from the
+ * form (a "confirm" checkbox), checked on the server so a stray click or a
+ * replayed request without it does nothing.
+ */
+export function confirmed(fd: FormData): boolean {
+  return fd.get("confirm") === "yes";
+}
+
+export const NOT_CONFIRMED = { error: "Tick the confirmation box to go ahead." } as const;
 
 const emptyToUndef = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 

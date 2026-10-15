@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { visibilityChangeError } from "@/lib/authz";
@@ -30,7 +30,7 @@ const signalSchema = z.object({
 });
 
 export async function addSignal(operatorId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(signalSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -55,7 +55,7 @@ export async function addSignal(operatorId: string, _: ActionState, fd: FormData
 }
 
 export async function setIntegration(operatorId: string, sourceKey: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   if (!definitionFor(sourceKey)) return { error: "Unknown source" };
   const parsed = parseForm(
     z.object({
@@ -84,7 +84,7 @@ export async function setIntegration(operatorId: string, sourceKey: string, _: A
 
 /** Builds a DRAFT brief deterministically from stored data. */
 export async function generateBrief(operatorId: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   return guarded(async () => {
     const weekOf = new Date();
     const [signals, opportunities, tasks, experiments, baselineCount] = await Promise.all([
@@ -115,7 +115,7 @@ export async function generateBrief(operatorId: string): Promise<ActionState> {
 }
 
 export async function reviewBrief(briefId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(
     z.object({ whyItMatters: f.optStr(), learnings: f.optStr(), status: z.enum(["DRAFT", "APPROVED", "SHARED"]) }),
     fd
@@ -151,7 +151,7 @@ const competitorSchema = z.object({
 });
 
 export async function addCompetitor(operatorId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(competitorSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -166,7 +166,7 @@ export async function addCompetitor(operatorId: string, _: ActionState, fd: Form
 }
 
 export async function removeCompetitor(operatorId: string, competitorId: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   return guarded(async () => {
     const c = await prisma.competitor.findUniqueOrThrow({ where: { id: competitorId } });
     if (c.operatorId !== operatorId) return { error: "Competitor does not belong to this operator." };
@@ -194,7 +194,7 @@ const contentBriefSchema = z.object({
 });
 
 export async function addContentBrief(operatorId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   const parsed = parseForm(contentBriefSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -220,7 +220,7 @@ const CONTENT_BRIEF_TRANSITIONS: Record<string, string[]> = {
 };
 
 export async function transitionContentBrief(operatorId: string, briefId: string, nextStatus: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   return guarded(async () => {
     const b = await prisma.contentBrief.findUniqueOrThrow({ where: { id: briefId } });
     if (b.operatorId !== operatorId) return { error: "Content brief does not belong to this operator." };
@@ -283,7 +283,7 @@ function extractJsonObject(text: string): unknown {
 }
 
 export async function analyzeOperatorWebsite(operatorId: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("operators.edit");
   return guarded(async () => {
     const op = await prisma.operator.findUniqueOrThrow({ where: { id: operatorId } });
     if (!op.websiteUrl) return { error: "Add a website URL to the operator's profile before analysing it." };

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { staffOptions } from "@/lib/queries";
 import { priorityScore, roadmapOrder } from "@/lib/domain/prioritise";
@@ -17,7 +17,7 @@ import { formatDate, formatNum, pct, toDateInput } from "@/lib/format";
 import { startAssessment, updateGovernance } from "../actions";
 
 export default async function OperatorPage({ params }: PageProps<"/operators/[id]">) {
-  await requireStaff();
+  await requirePermission("operators.view");
   const { id } = await params;
   const op = await prisma.operator.findUnique({
     where: { id },
@@ -30,7 +30,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
       measurements: true,
       attendance: true,
       initiatives: { include: { initiative: true } },
-      users: { select: { email: true, name: true, active: true, lastLoginAt: true } },
+      users: { select: { email: true, name: true, status: true, lastLoginAt: true } },
       workflowUses: { include: { asset: { select: { id: true, name: true, status: true } } } },
     },
   });
@@ -263,7 +263,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
                 {op.users.map((u) => (
                   <div key={u.email} className="text-sm">
                     <p className="font-medium">{u.name}</p>
-                    <p className="text-xs text-muted">{u.email} · {u.active ? `last login ${formatDate(u.lastLoginAt)}` : "deactivated"}</p>
+                    <p className="text-xs text-muted">{u.email} · {u.status === "ACTIVE" ? `last login ${formatDate(u.lastLoginAt)}` : u.status.toLowerCase()}</p>
                   </div>
                 ))}
               </FormGrid>

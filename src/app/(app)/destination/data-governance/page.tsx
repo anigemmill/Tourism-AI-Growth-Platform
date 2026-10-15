@@ -1,3 +1,4 @@
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getCurrentDestination } from "@/lib/destination";
 import { getSession } from "@/lib/session";
@@ -7,8 +8,9 @@ import { ConnectorRunButton } from "@/components/ConnectorRunButton";
 import { ImportForm } from "@/components/ImportForm";
 
 export default async function DataGovernancePage() {
+  await requirePermission("destination.view");
   const session = await getSession();
-  const canManage = session.role === "PARTNER" || session.role === "ADMIN";
+  const canManage = session.canManage;
   const destination = await getCurrentDestination();
   const [dataSources, importBatches] = destination
     ? await Promise.all([
@@ -47,7 +49,7 @@ export default async function DataGovernancePage() {
         </section>
       ) : (
         <EmptyState
-          title="Connectors and manual import require a PARTNER or ADMIN session"
+          title="Connectors and manual import require the “Import data & run connectors” permission"
           needs={["Switch your dev session role in the sidebar to try this."]}
         />
       )}

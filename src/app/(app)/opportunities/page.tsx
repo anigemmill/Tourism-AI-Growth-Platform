@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@/generated/prisma";
 import { Badge, ButtonLink, Card, DecisionBadge, EmptyState, EvidenceBadge, HorizonBadge, OppStatusBadge, PageHeader, Table, Tabs } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { priorityScore } from "@/lib/domain/prioritise";
 import { SOLUTION_LABELS } from "@/lib/labels";
@@ -10,7 +10,7 @@ import { formatNzd } from "@/lib/format";
 const HORIZONS = ["NOW", "NEXT", "LATER", "IGNORE"] as const;
 
 export default async function OpportunitiesPage({ searchParams }: PageProps<"/opportunities">) {
-  await requireStaff();
+  await requirePermission("opportunities.view");
   const sp = await searchParams;
   const horizon = HORIZONS.find((h) => h === sp.horizon);
   const operator = typeof sp.operator === "string" ? sp.operator : undefined;

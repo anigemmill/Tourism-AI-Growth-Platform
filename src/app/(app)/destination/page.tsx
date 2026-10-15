@@ -1,9 +1,11 @@
+import { requirePermission } from "@/lib/auth/session";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentDestination } from "@/lib/destination";
 import { Card, SectionHeading, StatTile, EmptyState } from "@/components/ui";
 
 export default async function ExecutiveOverviewPage() {
+  await requirePermission("destination.view");
   const destination = await getCurrentDestination();
 
   if (!destination) {

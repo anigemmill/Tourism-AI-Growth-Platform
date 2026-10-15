@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { PricingScenario } from "@/generated/prisma";
 import { ActionForm, Badge, ButtonLink, Card, Checkbox, DealStageBadge, EmptyState, FormGrid, IllustrativeBadge, Notice, PageHeader, Select, Stat, Table, Tabs, TextField } from "@/components/ui";
-import { requireFounder } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions } from "@/lib/queries";
 import { dealValue, runScenario, summarise } from "@/lib/domain/commercial";
@@ -13,7 +13,7 @@ import { DealFields } from "./DealFields";
 const TABS = ["pipeline", "costs", "scenarios"] as const;
 
 export default async function CommercialPage({ searchParams }: PageProps<"/commercial">) {
-  await requireFounder();
+  await requirePermission("commercial.view");
   const requested = (await searchParams).tab;
   const tab = TABS.find((t) => t === requested) ?? "pipeline";
   const [deals, costs] = await Promise.all([

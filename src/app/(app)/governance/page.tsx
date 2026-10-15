@@ -1,5 +1,5 @@
 import { ActionForm, Badge, ButtonLink, Card, FormGrid, Notice, PageHeader, Select, SeverityBadge, TextArea, TextField, WorkStatusBadge } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { operatorOptions } from "@/lib/queries";
 import { RISK_KIND_LABELS, SEVERITY_LABELS, WORK_STATUS_LABELS, options } from "@/lib/labels";
@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/format";
 import { createDecision, createRisk, resolveDecision, updateRisk } from "./actions";
 
 export default async function GovernancePage() {
-  await requireStaff();
+  await requirePermission("governance.view");
   const [risks, decisions, operatorOpts, consents] = await Promise.all([
     prisma.risk.findMany({ orderBy: [{ status: "asc" }, { severity: "desc" }], include: { operator: { select: { name: true } } } }),
     prisma.decisionRecord.findMany({ orderBy: [{ decided: "asc" }, { reviewDate: "asc" }], include: { operator: { select: { name: true } } } }),

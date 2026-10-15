@@ -6,7 +6,7 @@ import {
 } from "@/components/ui";
 import { EvidencePanel } from "@/components/EvidencePanel";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions, staffOptions } from "@/lib/queries";
 import { priorityBand, priorityScore } from "@/lib/domain/prioritise";
@@ -16,7 +16,7 @@ import { convertToProject, recordDecision, updateOpportunity } from "../actions"
 import { OpportunityForm } from "../OpportunityForm";
 
 export default async function OpportunityPage({ params }: PageProps<"/opportunities/[id]">) {
-  await requireStaff();
+  await requirePermission("opportunities.view");
   const { id } = await params;
   const o = await prisma.opportunity.findUnique({
     where: { id },

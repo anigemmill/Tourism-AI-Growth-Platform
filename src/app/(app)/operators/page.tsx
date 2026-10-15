@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Badge, ButtonLink, Card, EmptyState, OperatorStatusBadge, PageHeader, SyntheticBadge, Table, Tabs, AssessmentStatusBadge } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { OPERATOR_STATUS_LABELS } from "@/lib/labels";
 
 type Group = "none" | "category" | "status" | "tag";
 
 export default async function OperatorsPage({ searchParams }: PageProps<"/operators">) {
-  await requireStaff();
+  await requirePermission("operators.view");
   const sp = await searchParams;
   const group = (["category", "status", "tag"].includes(String(sp.group)) ? sp.group : "none") as Group;
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ActionForm, Badge, Card, EmptyState, FormGrid, PageHeader, Progress, TextArea, TextField, WorkStatusBadge } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { activeProgramme } from "@/lib/queries";
 import { programmePhaseLabel, programmeWeek, weekEnd, weekStart } from "@/lib/domain/programme";
@@ -9,7 +9,7 @@ import { formatShortDate, toDateInput } from "@/lib/format";
 import { addMilestone, setMilestoneStatus, updateProgramme, updateStages } from "./actions";
 
 export default async function ProgrammePage() {
-  await requireStaff();
+  await requirePermission("programme.view");
   const p = await activeProgramme();
   if (!p) return <EmptyState title="No active programme">Run the seed to create the programme skeleton.</EmptyState>;
   const now = new Date();

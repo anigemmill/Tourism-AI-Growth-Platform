@@ -1,9 +1,9 @@
 import { Card, PageHeader, Table } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export default async function AuditPage({ searchParams }: PageProps<"/governance/audit">) {
-  await requireStaff();
+  await requirePermission("audit.view");
   const type = (await searchParams).type;
   const rows = await prisma.auditLog.findMany({
     where: typeof type === "string" ? { entityType: type } : {},

@@ -19,9 +19,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
-  if (session.role !== "PARTNER" && session.role !== "ADMIN") {
+  if (!session.canManage) {
     return NextResponse.json(
-      { error: "Reviewing AI Discovery checks requires a PARTNER or ADMIN session." },
+      { error: "Reviewing AI Discovery checks requires the “Import data & run connectors” permission." },
       { status: 403 }
     );
   }

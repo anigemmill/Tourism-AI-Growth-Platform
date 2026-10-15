@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { Card, PageHeader } from "@/components/ui";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { updateOperator } from "../../actions";
 import { OperatorForm } from "../../OperatorForm";
 
 export default async function EditOperatorPage({ params }: PageProps<"/operators/[id]/edit">) {
-  await requireStaff();
+  await requirePermission("operators.edit");
   const { id } = await params;
   const op = await prisma.operator.findUnique({ where: { id } });
   if (!op) notFound();

@@ -1,6 +1,7 @@
 import { ActionForm, Badge, Card, DefinitionList, EmptyState, HorizonBadge, IllustrativeBadge, Notice, OppStatusBadge, PageHeader, Select, Table, TextArea, TextField, WorkStatusBadge, ExperimentStatusBadge } from "@/components/ui";
 import { BriefView } from "@/components/BriefView";
-import { requireUser } from "@/lib/auth/session";
+import { requireOperator } from "@/lib/auth/portal";
+import { can } from "@/lib/auth/session";
 import {
   portalAssessment, portalBriefs, portalBusiness, portalExperiments, portalMeasurements, portalOpportunities, portalProjects, portalTasks,
 } from "@/lib/dal/portal";
@@ -11,7 +12,15 @@ import { formatDate, formatNum, formatShortDate } from "@/lib/format";
 import { submitSignal } from "./actions";
 
 export default async function PortalHome() {
-  const user = await requireUser();
+  const { user, features } = await requireOperator();
+  if (!features.includes("portal.dashboard")) {
+    return (
+      <div>
+        <PageHeader eyebrow="Tourism AI Growth Pilot" title="Your portal" description="The business dashboard isn't enabled for your business. Contact the programme team if you need it." />
+      </div>
+    );
+  }
+  const canSignal = features.includes("portal.signals") && can(user, "portal.signals");
   const actor = { id: user.id, role: user.role, operatorId: user.operatorId };
   const [biz, opps, tasks, projects, measurements, experiments, assessment, briefs] = await Promise.all([
     portalBusiness(actor), portalOpportunities(actor), portalTasks(actor), portalProjects(actor),
@@ -95,13 +104,15 @@ export default async function PortalHome() {
           )}
         </div>
         <div className="space-y-6">
-          <Card title="Tell us what you're seeing" description="Enquiries, reviews, busy or quiet periods — it feeds your weekly brief.">
-            <ActionForm action={submitSignal} submitLabel="Send update" resetOnSuccess>
-              <Select name="type" label="About" options={[{ value: "ENQUIRY", label: "Enquiries" }, { value: "REVIEW", label: "Reviews / feedback" }, { value: "DEMAND", label: "Bookings / demand" }, { value: "OPERATIONS", label: "Operations" }, { value: "MARKET", label: "Market / competitors" }]} defaultValue="ENQUIRY" />
-              <TextField name="title" label="In one line" required />
-              <TextArea name="summary" label="Details" required rows={3} hint="Please don't include guests' personal details." />
-            </ActionForm>
-          </Card>
+          {canSignal && (
+            <Card title="Tell us what you're seeing" description="Enquiries, reviews, busy or quiet periods — it feeds your weekly brief.">
+              <ActionForm action={submitSignal} submitLabel="Send update" resetOnSuccess>
+                <Select name="type" label="About" options={[{ value: "ENQUIRY", label: "Enquiries" }, { value: "REVIEW", label: "Reviews / feedback" }, { value: "DEMAND", label: "Bookings / demand" }, { value: "OPERATIONS", label: "Operations" }, { value: "MARKET", label: "Market / competitors" }]} defaultValue="ENQUIRY" />
+                <TextField name="title" label="In one line" required />
+                <TextArea name="summary" label="Details" required rows={3} hint="Please don't include guests' personal details." />
+              </ActionForm>
+            </Card>
+          )}
           {assessment && (
             <Card title="Your assessment" description={formatDate(assessment.conductedAt)}>
               <p className="mb-3 text-sm">{assessment.summary}</p>

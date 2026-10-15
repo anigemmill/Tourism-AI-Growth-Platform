@@ -6,6 +6,7 @@
 // `scopedWhere` (or an explicit equivalent) for OPERATOR users.
 
 import type { UserRole, Visibility } from "@/generated/prisma";
+import { ROLE_SCOPE } from "@/lib/rbac/permissions";
 
 export interface Actor {
   id: string;
@@ -15,8 +16,10 @@ export interface Actor {
 
 export const SHARED_VISIBILITIES: Visibility[] = ["COHORT", "AGGREGATE_APPROVED", "PUBLIC_APPROVED"];
 
+/** Staff roles see programme data across businesses; what they may do with
+ * it is governed by permissions (src/lib/rbac). Operators are tenant-scoped. */
 export function isStaffRole(role: UserRole): boolean {
-  return role === "FOUNDER" || role === "ADMIN";
+  return ROLE_SCOPE[role] === "staff";
 }
 
 export interface RecordAccessInfo {

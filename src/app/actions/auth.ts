@@ -37,7 +37,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   }
 
   const ua = h.get("user-agent");
-  const result = await attemptLogin(parsed.data.email, parsed.data.password, ua);
+  const result = await attemptLogin(parsed.data.email, parsed.data.password, ua, ip);
   if (!result.ok) return { error: result.error };
 
   await setSessionCookie(result.token, result.expiresAt);

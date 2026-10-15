@@ -27,8 +27,9 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
 
   const p = await login(b, "admin@demo.example", "demo-pass-12345"); lastPage = p;
   // Admin cannot reach commercial or users
-  await p.goto(B + "/commercial"); await check("admin redirected away from commercial", new URL(p.url()).pathname === "/");
-  await p.goto(B + "/settings/users"); await check("admin redirected away from users", new URL(p.url()).pathname === "/");
+  await p.goto(B + "/commercial"); await check("admin redirected away from commercial", new URL(p.url()).pathname === "/no-access");
+  await p.goto(B + "/settings/users"); await check("admin redirected away from users", new URL(p.url()).pathname === "/no-access");
+  await p.goto(B + "/admin/billing"); await check("admin redirected away from billing", new URL(p.url()).pathname === "/no-access");
   const r = await p.request.get(B + "/api/export?entity=deals"); await check("admin export of deals forbidden", r.status() === 403);
 
   // Create operator
@@ -120,6 +121,43 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   await check("full export works and excludes password hashes", ex.status() === 200 && body.includes('"operators"') && !body.includes("passwordHash") && !body.includes("scrypt$"));
   const md = await f.request.get(B + "/api/reports?type=cohort");
   await check("cohort report downloads as markdown", md.status() === 200 && (await md.text()).startsWith("# Tourism AI Growth Collective"));
+
+  // Super admin console: dashboard, invite with a one-time link (no email configured locally)
+  await f.goto(B + "/admin");
+  await check("super admin dashboard shows account totals", await seen(f.getByText("Active businesses")));
+  await f.goto(B + "/admin/users");
+  const inviteEmail = `e2e-invite-${stamp}@demo.example`;
+  await f.fill("#f-name", "E2E Invitee"); await f.fill("#f-email", inviteEmail); await f.selectOption("#f-role", "OPERATOR");
+  await f.selectOption("#f-businessIds", { index: 0 });
+  await f.click("button:has-text('Send invitation')");
+  const linkBox = f.locator("#one-time-link");
+  await check("invitation produces a single-use link when email is off", await seen(linkBox));
+  const inviteUrl = new URL(await linkBox.inputValue());
+  const inv = await (await b.newContext()).newPage(); inv.setDefaultTimeout(T);
+  await inv.goto(B + inviteUrl.pathname + inviteUrl.search);
+  await inv.fill("#password", "invited-user-pass-1"); await inv.fill("#confirm", "invited-user-pass-1");
+  await Promise.all([inv.waitForURL(/login\?invite=done/), inv.click("button:has-text('Activate account')")]);
+  await check("invited user activates their account", /invite=done/.test(inv.url()));
+  await inv.goto(B + inviteUrl.pathname + inviteUrl.search);
+  await check("invitation link works only once", await seen(inv.getByText("This invitation isn't valid")));
+  const iu = await login(b, inviteEmail, "invited-user-pass-1");
+  await check("invited operator lands in the portal", new URL(iu.url()).pathname === "/portal");
+  await iu.goto(B + "/admin"); await check("operator cannot open the admin console", new URL(iu.url()).pathname === "/portal");
+  await iu.goto(B + "/portal/account");
+  await check("operator can manage their own account", await seen(iu.getByText("Where you're signed in")));
+  // Suspend the invited user (requires the confirmation box)
+  await f.goto(B + "/admin/users?q=" + encodeURIComponent(inviteEmail));
+  await f.click(`a:has-text("E2E Invitee")`);
+  const statusForm = f.locator("form", { has: f.locator("button:has-text('Change status')") });
+  await statusForm.locator("select[name=status]").selectOption("SUSPENDED");
+  await statusForm.locator("input[name=confirm]").check();
+  await statusForm.locator("button:has-text('Change status')").click();
+  await check("super admin can suspend a user", await seen(f.getByText(/is now suspended/)));
+  await iu.goto(B + "/portal"); await check("suspended user is signed out immediately", /login/.test(iu.url()));
+  // Forgot password never reveals whether an account exists
+  const fp = await (await b.newContext()).newPage();
+  await fp.goto(B + "/forgot-password"); await fp.fill("#email", `nobody-${stamp}@demo.example`); await fp.click("button:has-text('Send reset link')");
+  await check("forgot password gives a generic answer", await seen(fp.getByRole("status").filter({ hasText: "If an account exists" })));
 
   // Operator cannot download exports/reports
   const o = await login(b, "operator1@demo.example", "demo-pass-12345"); lastPage = o;

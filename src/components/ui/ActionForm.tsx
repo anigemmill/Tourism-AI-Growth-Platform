@@ -57,6 +57,7 @@ export function ActionForm({
           {state?.error && <span className="text-danger">{state.error}</span>}
           {state?.ok && <span className="text-success">{state.ok}</span>}
         </div>
+        {state?.link && <OneTimeLink link={state.link} />}
       </div>
     </form>
   );
@@ -67,5 +68,14 @@ function Submit({ label, variant, small, pending }: { label: string; variant: "p
     <button type="submit" disabled={pending} className={buttonClass(variant, small ? "sm" : "md")}>
       {pending ? "Saving…" : label}
     </button>
+  );
+}
+
+function OneTimeLink({ link }: { link: string }) {
+  return (
+    <div className="w-full rounded-xl border border-warning/30 bg-warning-soft p-3 text-xs">
+      <label className="mb-1 block font-medium text-ink" htmlFor="one-time-link">Single-use link — shown once. Share it only with the account owner.</label>
+      <input id="one-time-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="block w-full rounded-lg border border-line-strong bg-surface px-2 py-1 font-mono text-[11px]" />
+    </div>
   );
 }

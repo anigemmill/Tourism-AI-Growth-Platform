@@ -56,7 +56,14 @@ free Hobby plan does not allow commercial use), and access to the GitHub repo
    |---|---|
    | `DATABASE_URL` | Transaction pooler URL from step 1.3 |
    | `DIRECT_URL` | Session pooler URL from step 1.3 |
-   | `SETUP_TOKEN` | A long random string, e.g. output of `openssl rand -base64 32` (at least 24 characters) |
+   | `SETUP_TOKEN` | A long random string, e.g. output of `openssl rand -base64 32` (at least 24 characters). Only needed until the first super admin exists. |
+   | `RESEND_API_KEY` | API key from resend.com (sensitive). Enables invitation, password-reset and email-confirmation emails. |
+   | `EMAIL_FROM` | Verified sender, e.g. `Outside In <no-reply@theoutsidein.nz>` (the domain must be verified in Resend). |
+   | `APP_URL` | Optional. Public base URL used in emailed links, e.g. `https://www.theoutsidein.nz`. Defaults to the Vercel production URL. |
+
+   Without `RESEND_API_KEY` + `EMAIL_FROM` nothing is emailed: a super admin
+   is shown a single-use link to hand over in person instead, and
+   self-service "Forgotten your password?" can't deliver its link.
 
    Do **not** add `SEED_DEMO` or any `SEED_*` variables.
 
@@ -65,17 +72,18 @@ free Hobby plan does not allow commercial use), and access to the GitHub repo
    second, disposable Supabase project for staging and use its URLs for
    Preview. Never point previews at the production database: previews skip
    migrations, and anyone with a preview link could reach live data.
-3. **Production branch** (Settings → Git): the repo currently has one branch,
-   `claude/sweet-clarke-h6j8dd`. Either set that as the production branch, or
-   (recommended) create a `main` branch from it in GitHub, make `main` the
-   default branch, and set `main` as Vercel's production branch.
+3. **Production branch** (Settings → Git): `main`.
 4. **Deployment protection** (Settings → Deployment Protection): enable
    Vercel Authentication for Preview deployments.
 5. **Deploy.** In the build log you should see
    `Applying database migrations (production)…` followed by
    `All migrations have been successfully applied.`
 
-## 3. First run — create your founder account
+## 3. First run — create the first super admin
+
+`/setup` is the one-time bootstrap. It is not linked from the sign-in page and
+works only while `SETUP_TOKEN` is set **and** the users table is empty, so it
+can never be used to create a second account.
 
 1. Open `https://<your-project>.vercel.app/setup`.
 2. Enter the `SETUP_TOKEN`, your name, email, a password (12+ characters) and,
@@ -105,8 +113,9 @@ required — the session cookie is `Secure` in production.
 - **Backups:** Supabase Pro takes daily backups (Database → Backups). For
   extra safety, download a full export monthly from the app
   (*Data export → Download everything*) and store it securely.
-- **Adding people:** Users & access (founder only). Operators get an
-  operator account linked to their business.
+- **Adding people:** Administration → Users → *Invite a user* (see
+  `docs/ACCESS.md`). People set their own password from the emailed link.
+- **Locked out?** See "Recovering super-admin access" in `docs/ACCESS.md`.
 - **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs lint, type-check,
   unit tests, database integration tests and a build on every push.
 
@@ -115,6 +124,8 @@ required — the session cookie is `Secure` in production.
 - [ ] Supabase Pro, Sydney region, Data API disabled, MFA on.
 - [ ] Vercel Pro, env vars Production-only, preview protection on.
 - [ ] Founder account created; `SETUP_TOKEN` removed.
+- [ ] `RESEND_API_KEY` and `EMAIL_FROM` set; a test invitation received.
+- [ ] A second super admin exists (so one person leaving can't lock you out).
 - [ ] Demo data never seeded on this database.
 - [ ] Data storage location (Australia) stated in operator data agreements.
 - [ ] Privacy statement, retention schedule and correction process agreed

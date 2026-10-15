@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/session";
+import { requireOperatorFeature } from "@/lib/auth/portal";
+import { can } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, type ActionState } from "@/lib/forms";
@@ -16,8 +17,8 @@ const schema = z.object({
 
 /** Operators tell us what they're seeing. Always attributed to their own business. */
 export async function submitSignal(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireUser();
-  if (user.role !== "OPERATOR" || !user.operatorId) return { error: "Only operators can submit updates here." };
+  const { user } = await requireOperatorFeature("portal.signals");
+  if (!can(user, "portal.signals")) return { error: "Your account can't submit updates." };
   const parsed = parseForm(schema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {

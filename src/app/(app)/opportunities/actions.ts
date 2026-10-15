@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { visibilityChangeError } from "@/lib/authz";
@@ -57,7 +57,7 @@ async function consentCheck(operatorId: string | null | undefined, visibility: z
 }
 
 export async function createOpportunity(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   const parsed = parseForm(oppSchema, fd);
   if (parsed.error) return parsed.error;
   if (!parsed.data.operatorId && !parsed.data.initiativeId) return { error: "Choose an operator or a shared initiative." };
@@ -76,7 +76,7 @@ export async function createOpportunity(_: ActionState, fd: FormData): Promise<A
 }
 
 export async function updateOpportunity(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   const parsed = parseForm(oppSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -98,7 +98,7 @@ const decisionSchema = z.object({
 });
 
 export async function recordDecision(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   const parsed = parseForm(decisionSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -112,7 +112,7 @@ export async function recordDecision(id: string, _: ActionState, fd: FormData): 
 }
 
 export async function convertToProject(id: string): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   let pid = "";
   const res = await guarded(async () => {
     const o = await prisma.opportunity.findUniqueOrThrow({ where: { id } });
@@ -146,7 +146,7 @@ const templateSchema = z.object({
 });
 
 export async function createTemplate(_: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   const parsed = parseForm(templateSchema, fd);
   if (parsed.error) return parsed.error;
   return guarded(async () => {
@@ -159,7 +159,7 @@ export async function createTemplate(_: ActionState, fd: FormData): Promise<Acti
 
 /** Create one opportunity per selected operator from a proven template. */
 export async function applyTemplate(templateId: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  const user = await requireStaff();
+  const user = await requirePermission("opportunities.edit");
   const operatorIds = fd.getAll("operatorIds").map(String).filter(Boolean);
   if (operatorIds.length === 0) return { error: "Select at least one operator." };
   return guarded(async () => {
