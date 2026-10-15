@@ -27,7 +27,11 @@ free Hobby plan does not allow commercial use), and access to the GitHub repo
      `DIRECT_URL` (used only for migrations). Use the session pooler rather
      than the "direct connection", which is IPv6-only unless you buy the IPv4
      add-on.
-   Replace `[YOUR-PASSWORD]` in both with the database password.
+   Replace `[YOUR-PASSWORD]` in both with the database password (drop the
+   brackets). If the password contains `#`, `/`, `?` or a space, either
+   percent-encode those characters (`#`→`%23`, `/`→`%2F`, `?`→`%3F`,
+   space→`%20`) or reset it to letters and digits only — otherwise Prisma
+   rejects the URL with `P1013`.
 
    ```
    DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
@@ -43,6 +47,10 @@ free Hobby plan does not allow commercial use), and access to the GitHub repo
    applies database migrations on production deploys and then builds.
 2. **Environment variables** (Settings → Environment Variables). Set these for
    **Production only**:
+
+   Paste only the URL itself: no surrounding quotes, no `DATABASE_URL=`
+   prefix, no trailing space or line break (the quoted form above is `.env`
+   syntax, not what the dashboard field takes).
 
    | Name | Value |
    |---|---|
@@ -117,6 +125,7 @@ required — the session cookie is `Secure` in production.
 | Symptom | Likely cause |
 |---|---|
 | Build fails: `DATABASE_URL and DIRECT_URL must be set` | Env vars missing for Production |
+| Build fails: `P1013 The provided database string is invalid` | Malformed `DATABASE_URL`/`DIRECT_URL`: quotes or `NAME=` pasted into the value, leading/trailing whitespace, unencoded `#` `/` `?` in the password, or a non-Postgres URL. The build now prints which one (never the password) before running migrations |
 | Build fails at migrations: `P1001 can't reach database` | Used the IPv6 direct host for `DIRECT_URL` — use the session pooler; or wrong password |
 | Runtime: `prepared statement "s0" already exists` | `DATABASE_URL` missing `?pgbouncer=true` |
 | Runtime: too many connections | `DATABASE_URL` missing `connection_limit=1`, or using the session pooler (5432) instead of the transaction pooler (6543) at runtime |
