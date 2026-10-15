@@ -4,9 +4,9 @@
 // Preview deployments never migrate.
 
 import { execSync } from "node:child_process";
-import { checkDatabaseUrl } from "./database-url.mjs";
+import { checkDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
 
-const run = (cmd) => execSync(cmd, { stdio: "inherit" });
+const run = (cmd, env = process.env) => execSync(cmd, { stdio: "inherit", env });
 const env = process.env.VERCEL_ENV ?? "development";
 
 run("npx prisma generate");
@@ -26,7 +26,16 @@ if (env === "production") {
     process.exit(1);
   }
   console.log("Applying database migrations (production)…");
-  run("npx prisma migrate deploy");
+  // Longer connect timeout for the first connection to an idle database, and
+  // one retry: `migrate deploy` is idempotent and takes an advisory lock.
+  const migrateEnv = { ...process.env, DIRECT_URL: withConnectTimeout(process.env.DIRECT_URL, 30) };
+  try {
+    run("npx prisma migrate deploy", migrateEnv);
+  } catch {
+    console.warn("Migration attempt failed; retrying once in 15 s…");
+    execSync("sleep 15");
+    run("npx prisma migrate deploy", migrateEnv);
+  }
 } else {
   console.log(`Skipping migrations for VERCEL_ENV=${env}.`);
 }

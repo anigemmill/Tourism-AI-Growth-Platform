@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkDatabaseUrl } from "./database-url.mjs";
+import { checkDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
 
 const HOST = "aws-0-ap-southeast-2.pooler.supabase.com";
 const direct = (pw) => `postgresql://postgres.abcref:${pw}@${HOST}:5432/postgres`;
@@ -58,4 +58,13 @@ test("warns when the pooled runtime URL lacks pgbouncer=true", () => {
   const r = checkDatabaseUrl("DATABASE_URL", `postgresql://postgres.abcref:pass@${HOST}:6543/postgres`);
   assert.deepEqual(r.errors, []);
   assert.match(r.warnings.join(), /pgbouncer=true/);
+});
+
+test("withConnectTimeout lengthens the timeout without disturbing the URL", () => {
+  const out = new URL(withConnectTimeout(direct("p%23ss"), 30));
+  assert.equal(out.searchParams.get("connect_timeout"), "30");
+  assert.equal(out.password, "p%23ss");
+  assert.equal(out.port, "5432");
+  assert.equal(withConnectTimeout(direct("x") + "?connect_timeout=9", 30), direct("x") + "?connect_timeout=9");
+  assert.equal(withConnectTimeout(undefined, 30), undefined);
 });

@@ -100,3 +100,19 @@ function decodeSafe(s) {
     return s;
   }
 }
+
+// Prisma gives up on a new connection after 5 s by default. The Supabase
+// pooler can take longer than that to open the first connection to an idle
+// database, which surfaces as P1001 "Can't reach database server". Returns
+// the URL with a longer connect_timeout unless one is already set.
+export function withConnectTimeout(value, seconds) {
+  if (!value) return value;
+  try {
+    const url = new URL(value);
+    if (url.searchParams.has("connect_timeout")) return value;
+    url.searchParams.set("connect_timeout", String(seconds));
+    return url.toString();
+  } catch {
+    return value;
+  }
+}

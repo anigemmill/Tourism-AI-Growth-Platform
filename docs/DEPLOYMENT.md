@@ -126,7 +126,7 @@ required — the session cookie is `Secure` in production.
 |---|---|
 | Build fails: `DATABASE_URL and DIRECT_URL must be set` | Env vars missing for Production |
 | Build fails: `P1013 The provided database string is invalid` | Malformed `DATABASE_URL`/`DIRECT_URL`: quotes or `NAME=` pasted into the value, leading/trailing whitespace, unencoded `#` `/` `?` in the password, or a non-Postgres URL. The build now prints which one (never the password) before running migrations |
-| Build fails at migrations: `P1001 can't reach database` | Used the IPv6 direct host for `DIRECT_URL` — use the session pooler; or wrong password |
+| Build fails at migrations: `P1001 can't reach database` | Used the IPv6 direct host for `DIRECT_URL` (use the session pooler), or a pooler host that is not your project's (copy the exact host from Supabase → Connect; projects live on `aws-0-…` or `aws-1-…`). The build already allows 30 s per connection and retries once, so a slow first connection to an idle database is covered |
 | Runtime: `prepared statement "s0" already exists` | `DATABASE_URL` missing `?pgbouncer=true` |
 | Runtime: too many connections | `DATABASE_URL` missing `connection_limit=1`, or using the session pooler (5432) instead of the transaction pooler (6543) at runtime |
 | `/setup` shows 404 | A user already exists, or `SETUP_TOKEN` is unset/shorter than 24 characters |
