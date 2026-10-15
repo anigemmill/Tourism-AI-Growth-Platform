@@ -1001,6 +1001,9 @@ model Operator {
   signals       Signal[]
   integrations  IntegrationConnection[]
   briefs        GrowthBrief[]
+  competitors   Competitor[]
+  contentBriefs ContentBrief[]
+  profile       OperatorProfile?
 }
 
 // ---------------------------------------------------------------------------
@@ -1587,6 +1590,9 @@ model Signal {
   createdBy           String
   createdAt           DateTime        @default(now())
 
+  competitorId String?
+  competitor   Competitor? @relation(fields: [competitorId], references: [id])
+
   opportunities Opportunity[]
 
   @@index([operatorId, createdAt])
@@ -1624,4 +1630,89 @@ model GrowthBrief {
   updatedAt    DateTime    @updatedAt
 
   @@index([operatorId, weekOf])
+}
+
+// ---------------------------------------------------------------------------
+// Operator Growth Intelligence — additional modules ported from TGI
+// (content briefs, competitor tracking, LLM website analysis). See
+// docs/GROWTH_OS.md §5.4 for what these add to the original absorption.
+// ---------------------------------------------------------------------------
+
+model Competitor {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  name       String
+  websiteUrl String?
+  notes      String?
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  signals Signal[]
+
+  @@index([operatorId])
+}
+
+model ContentBrief {
+  id               String             @id @default(cuid())
+  operatorId       String
+  operator         Operator           @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  contentType      ContentType
+  title            String
+  whyNow           String // traveller demand / commercial intent / SEO / AI discovery / competitive gap — never "just because it's trending"
+  targetAudience   String
+  keyPoints        String[]
+  seoNotes         String?
+  aiDiscoveryNotes String?
+  status           ContentBriefStatus @default(PROPOSED)
+  approvedBy       String?
+  approvedAt       DateTime?
+  createdBy        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([operatorId, status])
+}
+
+/// LLM-derived site profile (1:1, optional). Never populated without a
+/// configured ANTHROPIC_API_KEY; analysisStatus reflects the honest state.
+model OperatorProfile {
+  id                    String           @id @default(cuid())
+  operatorId            String           @unique
+  operator              Operator         @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  positioning           String?
+  differentiators       String[]
+  pricingSummary        String?
+  experiencesSummary    String?
+  seasonalitySummary    String?
+  faqs                  Json? // [{ question, answer }]
+  bookingProcessSummary String?
+  currentContentSummary String?
+  analysisStatus        String           @default("NOT_CONNECTED") // CONNECTED | REQUIRES_API | FAILED | NOT_CONNECTED
+  analysisError         String?
+  analysisConfidence    ConfidenceLevel?
+  analyzedAt            DateTime?
+  analyzedBy            String?
+  updatedAt             DateTime         @updatedAt
+}
+
+enum ContentType {
+  LANDING_PAGE
+  BLOG
+  DESTINATION_GUIDE
+  FAQ
+  SOCIAL_POST
+  VIDEO
+  EMAIL
+  PR
+  COMPARISON
+  ITINERARY
+}
+
+enum ContentBriefStatus {
+  PROPOSED
+  APPROVED
+  IN_PROGRESS
+  PUBLISHED
+  REJECTED
 }

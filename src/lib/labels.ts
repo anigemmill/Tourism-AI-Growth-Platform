@@ -1,8 +1,8 @@
 // Human-readable labels for enum values. Single source for UI + exports.
 
 import type {
-  AssessmentArea, AssessmentStatus, ComparisonMethod, ConfidenceLevel, CostCategory, CulturalReview,
-  DealStage, DealType, Decision, EvidenceKind, ExperimentStatus, Horizon, MetricKey, OperatorStatus,
+  AssessmentArea, AssessmentStatus, ComparisonMethod, ConfidenceLevel, ContentBriefStatus, ContentType, CostCategory,
+  CulturalReview, DealStage, DealType, Decision, EvidenceKind, ExperimentStatus, Horizon, MetricKey, OperatorStatus,
   OpportunityStatus, RiskKind, Severity, SolutionType, UserRole, Visibility, WorkStatus, WorkflowKind,
   WorkflowStatus,
 } from "@/generated/prisma";
@@ -132,6 +132,27 @@ export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
 export const COST_LABELS: Record<CostCategory, string> = {
   DELIVERY_LABOUR: "Delivery labour", CONTRACTOR: "Contractor", SOFTWARE: "Software",
   TRAVEL: "Travel", VENUE: "Venue", OTHER: "Other",
+};
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  LANDING_PAGE: "Landing page",
+  BLOG: "Blog post",
+  DESTINATION_GUIDE: "Destination guide",
+  FAQ: "FAQ",
+  SOCIAL_POST: "Social post",
+  VIDEO: "Video",
+  EMAIL: "Email",
+  PR: "PR",
+  COMPARISON: "Comparison page",
+  ITINERARY: "Itinerary",
+};
+
+export const CONTENT_BRIEF_STATUS_LABELS: Record<ContentBriefStatus, string> = {
+  PROPOSED: "Proposed",
+  APPROVED: "Approved",
+  IN_PROGRESS: "In progress",
+  PUBLISHED: "Published",
+  REJECTED: "Rejected",
 };
 
 export const RISK_KIND_LABELS: Record<RiskKind, string> = { RISK: "Risk", BLOCKER: "Blocker", ISSUE: "Issue" };

@@ -5,10 +5,22 @@ import { BriefView } from "@/components/BriefView";
 import { ClaimBadge, CLAIM_LABELS } from "@/components/ClaimBadge";
 import { requireStaff } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { CONFIDENCE_LABELS, VISIBILITY_LABELS, options } from "@/lib/labels";
+import { CONFIDENCE_LABELS, CONTENT_BRIEF_STATUS_LABELS, CONTENT_TYPE_LABELS, VISIBILITY_LABELS, options } from "@/lib/labels";
 import { INTEGRATION_REGISTRY, INTEGRATION_STATUS_LABELS, effectiveStatus } from "@/lib/integrations/registry";
+import { isLLMConfigured } from "@/lib/llm/anthropic";
 import { formatDate, toDateInput } from "@/lib/format";
-import { addSignal, generateBrief, reviewBrief, setIntegration } from "./actions";
+import {
+  addSignal, generateBrief, reviewBrief, setIntegration,
+  addCompetitor, removeCompetitor, addContentBrief, transitionContentBrief, analyzeOperatorWebsite,
+} from "./actions";
+
+const CONTENT_BRIEF_TRANSITIONS: Record<string, { next: string; label: string }[]> = {
+  PROPOSED: [{ next: "APPROVED", label: "Approve" }, { next: "REJECTED", label: "Reject" }],
+  APPROVED: [{ next: "IN_PROGRESS", label: "Start drafting" }, { next: "REJECTED", label: "Reject" }],
+  IN_PROGRESS: [{ next: "PUBLISHED", label: "Mark published" }],
+  PUBLISHED: [],
+  REJECTED: [],
+};
 
 const SIGNAL_TYPES = ["DEMAND", "ENQUIRY", "REVIEW", "AI_DISCOVERY", "COMPETITOR", "MARKET", "OPERATIONS"].map((v) => ({ value: v, label: v.replace("_", " ").toLowerCase() }));
 
@@ -21,6 +33,9 @@ export default async function IntelligencePage({ params }: PageProps<"/operators
       signals: { orderBy: { sourceTimestamp: "desc" }, take: 50 },
       integrations: true,
       briefs: { orderBy: { createdAt: "desc" }, take: 6 },
+      competitors: { orderBy: { name: "asc" } },
+      contentBriefs: { orderBy: { createdAt: "desc" } },
+      profile: true,
     },
   });
   if (!op) notFound();
@@ -114,6 +129,54 @@ export default async function IntelligencePage({ params }: PageProps<"/operators
                     <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue="CONFIDENTIAL" />
                     <Select name="momentum" label="Momentum" options={["DECLINING", "STABLE", "RISING"].map((v) => ({ value: v, label: v.toLowerCase() }))} placeholder="—" />
                     <Select name="commercialPotential" label="Commercial potential" options={["LOW", "MEDIUM", "HIGH"].map((v) => ({ value: v, label: v.toLowerCase() }))} placeholder="—" />
+                    {op.competitors.length > 0 && (
+                      <Select name="competitorId" label="Competitor (if applicable)" options={op.competitors.map((c) => ({ value: c.id, label: c.name }))} placeholder="—" />
+                    )}
+                  </FormGrid>
+                </ActionForm>
+              </div>
+            </details>
+          </Card>
+
+          <Card title="Content briefs" description="Based on demand, commercial intent, SEO/AI-discovery opportunity or a competitive gap — never generated just because a topic is trending." padded={false}>
+            {op.contentBriefs.length === 0 ? (
+              <div className="p-5"><EmptyState title="No content briefs yet" /></div>
+            ) : (
+              <Table>
+                <thead><tr><th>Brief</th><th>Status</th><th /></tr></thead>
+                <tbody>
+                  {op.contentBriefs.map((b) => (
+                    <tr key={b.id}>
+                      <td className="min-w-[16rem]">
+                        <p className="font-medium">{b.title}</p>
+                        <p className="text-xs text-muted">{CONTENT_TYPE_LABELS[b.contentType]} · {b.targetAudience}</p>
+                        <p className="mt-1 text-xs text-muted">{b.whyNow}</p>
+                      </td>
+                      <td><Badge tone={b.status === "PUBLISHED" ? "success" : b.status === "REJECTED" ? "outline" : "info"}>{CONTENT_BRIEF_STATUS_LABELS[b.status]}</Badge></td>
+                      <td className="whitespace-nowrap">
+                        {CONTENT_BRIEF_TRANSITIONS[b.status]?.map((t) => (
+                          <ActionForm key={t.next} action={transitionContentBrief.bind(null, op.id, b.id, t.next)} submitLabel={t.label} inline variant={t.next === "REJECTED" ? "danger" : "secondary"} />
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+            <details className="border-t border-line p-5">
+              <summary className="cursor-pointer text-sm font-medium text-accent">Propose a content brief</summary>
+              <div className="mt-4">
+                <ActionForm action={addContentBrief.bind(null, op.id)} submitLabel="Propose brief" resetOnSuccess>
+                  <FormGrid cols={2}>
+                    <Select name="contentType" label="Content type" options={options(CONTENT_TYPE_LABELS)} defaultValue="LANDING_PAGE" />
+                    <TextField name="targetAudience" label="Target audience" required />
+                  </FormGrid>
+                  <TextField name="title" label="Title" required />
+                  <TextArea name="whyNow" label="Why now" required rows={2} />
+                  <TextArea name="keyPoints" label="Key points (one per line)" rows={3} />
+                  <FormGrid cols={2}>
+                    <TextField name="seoNotes" label="SEO notes" />
+                    <TextField name="aiDiscoveryNotes" label="AI discovery notes" />
                   </FormGrid>
                 </ActionForm>
               </div>
@@ -122,6 +185,67 @@ export default async function IntelligencePage({ params }: PageProps<"/operators
         </div>
 
         <div className="space-y-6">
+          <Card title="Website profile" description="LLM-extracted from the operator's own site. Never populated without ANTHROPIC_API_KEY configured; nothing here is invented.">
+            {!isLLMConfigured() ? (
+              <Notice tone="warning">ANTHROPIC_API_KEY is not configured — this feature is unavailable. No profile has been invented in its place.</Notice>
+            ) : !op.websiteUrl ? (
+              <Notice tone="info">Add a website URL to the operator&apos;s profile first.</Notice>
+            ) : (
+              <>
+                {op.profile?.analysisStatus === "CONNECTED" && op.profile.analyzedAt ? (
+                  <div className="space-y-2 text-sm">
+                    <p className="text-xs text-muted">
+                      Analysed {formatDate(op.profile.analyzedAt)} by {op.profile.analyzedBy}
+                      {op.profile.analysisConfidence && <> · <Badge tone="outline">{CONFIDENCE_LABELS[op.profile.analysisConfidence]} confidence</Badge></>}
+                    </p>
+                    {op.profile.positioning && <p>{op.profile.positioning}</p>}
+                    {op.profile.differentiators.length > 0 && (
+                      <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted">
+                        {op.profile.differentiators.map((d, i) => <li key={i}>{d}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                ) : op.profile?.analysisStatus === "FAILED" ? (
+                  <Notice tone="danger">Last analysis failed: {op.profile.analysisError}</Notice>
+                ) : (
+                  <EmptyState title="Not analysed yet" />
+                )}
+                <div className="mt-4 border-t border-line pt-4">
+                  <ActionForm action={analyzeOperatorWebsite.bind(null, op.id)} submitLabel={op.profile?.analyzedAt ? "Re-analyse website" : "Analyse website"} variant="secondary" />
+                </div>
+              </>
+            )}
+          </Card>
+
+          <Card title="Competitors" description="Named competitors this operator's signals can be attributed to.">
+            {op.competitors.length === 0 ? (
+              <EmptyState title="No competitors recorded" />
+            ) : (
+              <ul className="space-y-3">
+                {op.competitors.map((c) => (
+                  <li key={c.id} className="flex items-start justify-between gap-2 border-t border-line pt-3 first:border-t-0 first:pt-0">
+                    <div>
+                      <p className="text-sm font-medium">{c.name}</p>
+                      {c.websiteUrl && <p className="text-xs text-muted">{c.websiteUrl}</p>}
+                      {c.notes && <p className="mt-0.5 text-xs text-muted">{c.notes}</p>}
+                    </div>
+                    <ActionForm action={removeCompetitor.bind(null, op.id, c.id)} submitLabel="Remove" inline variant="ghost" confirm={`Remove ${c.name}?`} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            <details className="mt-4 border-t border-line pt-3">
+              <summary className="cursor-pointer text-xs text-accent">Add a competitor</summary>
+              <div className="mt-2">
+                <ActionForm action={addCompetitor.bind(null, op.id)} submitLabel="Add" resetOnSuccess>
+                  <TextField name="name" label="Name" required />
+                  <TextField name="websiteUrl" label="Website" placeholder="https://" />
+                  <TextArea name="notes" label="Notes" rows={2} />
+                </ActionForm>
+              </div>
+            </details>
+          </Card>
+
           <Card title="Data sources" description="Pilot default is manual export. Nothing is marked connected until a tested sync is recorded.">
             <Notice tone="info">No live operator integrations are built in phase 1. This records how each source is obtained.</Notice>
             <ul className="mt-4 space-y-4">
