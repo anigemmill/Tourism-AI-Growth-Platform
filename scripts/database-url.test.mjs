@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
+import { checkDatabaseUrl, normalizeDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
 
 const HOST = "aws-0-ap-southeast-2.pooler.supabase.com";
 const direct = (pw) => `postgresql://postgres.abcref:${pw}@${HOST}:5432/postgres`;
@@ -67,4 +67,28 @@ test("withConnectTimeout lengthens the timeout without disturbing the URL", () =
   assert.equal(out.port, "5432");
   assert.equal(withConnectTimeout(direct("x") + "?connect_timeout=9", 30), direct("x") + "?connect_timeout=9");
   assert.equal(withConnectTimeout(undefined, 30), undefined);
+});
+
+test("normalizeDatabaseUrl trims edges and whitespace around the password only", () => {
+  const messy = `  postgresql://postgres.abcref:\n s3cretPass \n@${HOST}:5432/postgres\n`;
+  const { value, notes } = normalizeDatabaseUrl("DIRECT_URL", messy);
+  assert.equal(value, direct("s3cretPass"));
+  assert.ok(notes.length >= 2);
+  assert.ok(!notes.join().includes("s3cret"), "notes never contain the password");
+  assert.deepEqual(checkDatabaseUrl("DIRECT_URL", value).errors, []);
+});
+
+test("normalizeDatabaseUrl keeps whitespace inside the password, which still fails the check", () => {
+  const { value } = normalizeDatabaseUrl("DIRECT_URL", direct("s3cret Pass"));
+  assert.equal(value, direct("s3cret Pass"));
+  assert.match(checkDatabaseUrl("DIRECT_URL", value).errors.join(), /space/);
+});
+
+test("normalizeDatabaseUrl adds pooler params to DATABASE_URL only", () => {
+  const bare = `postgresql://postgres.abcref:pw@${HOST}:6543/postgres`;
+  assert.equal(normalizeDatabaseUrl("DATABASE_URL", bare).value, bare + "?pgbouncer=true&connection_limit=1");
+  assert.equal(normalizeDatabaseUrl("DATABASE_URL", bare + "?pgbouncer=true").value, bare + "?pgbouncer=true&connection_limit=1");
+  assert.equal(normalizeDatabaseUrl("DATABASE_URL", pooled("pw")).value, pooled("pw"));
+  assert.equal(normalizeDatabaseUrl("DIRECT_URL", direct("pw")).value, direct("pw"));
+  assert.deepEqual(normalizeDatabaseUrl("DIRECT_URL", direct("pw")).notes, []);
 });

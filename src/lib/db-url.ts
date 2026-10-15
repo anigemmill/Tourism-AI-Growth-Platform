@@ -13,3 +13,24 @@ export function withConnectTimeout(value: string | undefined, seconds: number): 
     return value;
   }
 }
+
+// Same repairs as scripts/database-url.mjs normalizeDatabaseUrl, for the
+// runtime client: trim whitespace at the ends and directly around the
+// password, and add pgbouncer=true / connection_limit=1 on the Supabase
+// transaction pooler. Whitespace inside the password is left as is.
+export function normalizeDatabaseUrl(value: string | undefined): string | undefined {
+  if (!value) return value;
+  let v = value.trim();
+  const m = /^(postgres(?:ql)?:\/\/)([^:@/\s]+):([\s\S]*)@([^@]*)$/.exec(v);
+  if (m) {
+    const [, scheme, user, password, rest] = m;
+    v = `${scheme}${user}:${password.trim()}@${rest.replace(/^\s+/, "")}`;
+  }
+  if (/\.pooler\.supabase\.com:6543\//.test(v)) {
+    const add: string[] = [];
+    if (!/[?&]pgbouncer=/.test(v)) add.push("pgbouncer=true");
+    if (!/[?&]connection_limit=/.test(v)) add.push("connection_limit=1");
+    if (add.length) v += (v.includes("?") ? "&" : "?") + add.join("&");
+  }
+  return v;
+}

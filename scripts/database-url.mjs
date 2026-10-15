@@ -116,3 +116,42 @@ export function withConnectTimeout(value, seconds) {
     return value;
   }
 }
+
+// Repairs only what cannot be part of a valid connection string, without
+// ever reading the password's characters back out:
+// - whitespace at the very start/end of the value;
+// - whitespace directly around the password (between "user:" and "@host"),
+//   which is what pasting a password over [YOUR-PASSWORD] tends to leave;
+// - for DATABASE_URL on the Supabase transaction pooler (port 6543), the
+//   missing pgbouncer=true / connection_limit=1 parameters.
+// Whitespace inside the password is left alone; checkDatabaseUrl rejects it.
+// Returns { value, notes } where notes describe the changes (no secrets).
+export function normalizeDatabaseUrl(name, value) {
+  const notes = [];
+  if (!value) return { value, notes };
+  let v = value;
+  if (v !== v.trim()) {
+    v = v.trim();
+    notes.push(`removed whitespace at the start/end of ${name}`);
+  }
+  const m = /^(postgres(?:ql)?:\/\/)([^:@/\s]+):([\s\S]*)@([^@]*)$/.exec(v);
+  if (m) {
+    const [, scheme, user, password, rest] = m;
+    const pw = password.trim();
+    const host = rest.replace(/^\s+/, "");
+    if (pw !== password || host !== rest) {
+      notes.push(`removed ${password.length - pw.length + rest.length - host.length} whitespace character(s) around ${name}'s password`);
+      v = `${scheme}${user}:${pw}@${host}`;
+    }
+  }
+  if (name === "DATABASE_URL" && /\.pooler\.supabase\.com:6543\//.test(v)) {
+    const add = [];
+    if (!/[?&]pgbouncer=/.test(v)) add.push("pgbouncer=true");
+    if (!/[?&]connection_limit=/.test(v)) add.push("connection_limit=1");
+    if (add.length) {
+      v += (v.includes("?") ? "&" : "?") + add.join("&");
+      notes.push(`added ${add.join("&")} to DATABASE_URL (transaction pooler)`);
+    }
+  }
+  return { value: v, notes };
+}

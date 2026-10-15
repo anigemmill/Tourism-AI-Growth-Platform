@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { withConnectTimeout } from "./db-url";
+import { normalizeDatabaseUrl, withConnectTimeout } from "./db-url";
 
 const pooled = "postgresql://postgres.ref:p%23ss@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
 
@@ -21,4 +21,14 @@ test("respects an explicit connect_timeout", () => {
 test("leaves missing or unparseable values alone", () => {
   assert.equal(withConnectTimeout(undefined, 15), undefined);
   assert.equal(withConnectTimeout("not a url", 15), "not a url");
+});
+
+test("normalizeDatabaseUrl mirrors the build-time repairs", () => {
+  const host = "aws-0-ap-southeast-2.pooler.supabase.com";
+  assert.equal(
+    normalizeDatabaseUrl(` postgresql://postgres.ref:\n pw \n@${host}:6543/postgres\n`),
+    `postgresql://postgres.ref:pw@${host}:6543/postgres?pgbouncer=true&connection_limit=1`,
+  );
+  assert.equal(normalizeDatabaseUrl(pooled), pooled);
+  assert.equal(normalizeDatabaseUrl(undefined), undefined);
 });
