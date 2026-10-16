@@ -107,7 +107,7 @@ export function AppShell({
         ))}
       </nav>
       <div className="m-3 flex items-center gap-3 rounded-xl bg-sidebar-card px-3 py-3">
-        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-xs font-semibold text-sidebar-ink">
+        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet text-xs font-semibold text-[#15161a]">
           {initials(user.name)}
         </span>
         <div className="min-w-0 flex-1">

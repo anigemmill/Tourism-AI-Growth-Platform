@@ -41,7 +41,7 @@ async function main() {
 async function seedReviewExtras(prisma: PrismaClient) {
   const DAY = 86_400_000;
   const now = Date.now();
-  const founder = await prisma.user.findFirst({ where: { role: "FOUNDER" }, select: { id: true } });
+  const founder = await prisma.user.findFirst({ where: { role: "FOUNDER" }, select: { id: true, name: true } });
   const ops = await prisma.operator.findMany({ where: { isSynthetic: true, members: { some: {} } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   for (const [i, op] of ops.entries()) {
     await prisma.growthBrief.create({
@@ -61,9 +61,9 @@ async function seedReviewExtras(prisma: PrismaClient) {
         dataGaps: ["No booking data shared yet (synthetic)"],
         generatedBy: "rules",
         status: "SHARED",
-        approvedBy: founder?.id,
+        approvedBy: founder?.name ?? "Programme team",
         approvedAt: new Date(now - 2 * DAY),
-        createdBy: founder?.id ?? "staging-seed",
+        createdBy: founder?.name ?? "Programme team",
       },
     });
     const amount = 14900 + i * 5000;
