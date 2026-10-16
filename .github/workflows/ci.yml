@@ -4,9 +4,18 @@ on:
   push:
   pull_request:
 
+# Least privilege: the workflow token can only read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16
@@ -22,8 +31,12 @@ jobs:
       DIRECT_URL: postgresql://app:app@localhost:5432/growthos_test
       TEST_DATABASE_URL: postgresql://app:app@localhost:5432/growthos_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Actions are pinned to full commit SHAs (tag in the comment) so a moved
+      # tag can't change what runs. Dependabot keeps the pins up to date.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
