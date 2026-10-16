@@ -52,6 +52,9 @@ test("role defaults only contain assignable permissions", () => {
 });
 
 test("business features default on and honour overrides", () => {
-  assert.deepEqual(enabledFeatures([]), ["portal.dashboard", "portal.collective", "portal.signals"]);
-  assert.deepEqual(enabledFeatures([{ feature: "portal.collective", enabled: false }, { feature: "bogus", enabled: true }]), ["portal.dashboard", "portal.signals"]);
+  assert.deepEqual(enabledFeatures([], "outside-in"), ["portal.dashboard", "portal.collective", "portal.signals"]);
+  assert.deepEqual(enabledFeatures([{ feature: "portal.collective", enabled: false }, { feature: "bogus", enabled: true }], "outside-in"), ["portal.dashboard", "portal.signals"]);
+  // Findable clients don't get the cohort Collective unless it's switched on for them.
+  assert.deepEqual(enabledFeatures([], "findable"), ["portal.dashboard", "portal.signals"]);
+  assert.deepEqual(enabledFeatures([{ feature: "portal.collective", enabled: true }], "findable"), ["portal.dashboard", "portal.collective", "portal.signals"]);
 });

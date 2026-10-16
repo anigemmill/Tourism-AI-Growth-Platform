@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import type { BusinessAccountStatus } from "@/generated/prisma";
 import { audit } from "@/lib/audit";
 import { FEATURES, isFeature } from "@/lib/rbac/features";
+import type { BrandId } from "@/lib/brand";
 import { ACCOUNT_STATUS_LABELS } from "@/lib/labels";
 import { AdminError, type AdminActor, type AdminResult } from "./users";
 
@@ -74,10 +75,11 @@ export function onboardingSteps(b: {
   assessments: number;
   hasProfile: boolean;
   programmeId: string | null;
-}) {
+}, brand: BrandId) {
   const steps = [
     { label: "Primary contact recorded", done: Boolean(b.contactEmail) },
-    { label: "Enrolled in a programme", done: Boolean(b.programmeId) },
+    // Findable clients aren't enrolled in a cohort programme.
+    ...(brand === "findable" ? [] : [{ label: "Enrolled in a programme", done: Boolean(b.programmeId) }]),
     { label: "Data agreement signed", done: Boolean(b.dataAgreementSignedAt) },
     { label: "User invited", done: b.members > 0 },
     { label: "User has activated their account", done: b.activeMembers > 0 },

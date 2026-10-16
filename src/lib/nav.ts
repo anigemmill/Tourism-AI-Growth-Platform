@@ -3,7 +3,7 @@
 
 import type { NavGroup } from "@/components/AppShell";
 import type { Permission } from "@/lib/rbac/permissions";
-import { newLayoutEnabled } from "@/lib/brand";
+import { getBrand, newLayoutEnabled, type BrandId } from "@/lib/brand";
 
 type Item = { href: string; label: string; badge?: string; permission: Permission };
 
@@ -74,8 +74,20 @@ const PILOT_GROUPS: Group[] = [
 const NEW_GROUPS: Group[] = [BACK_OFFICE, { label: "Rotorua pilot", items: [{ href: "/", label: "Programme dashboard", permission: "dashboard.programme" }] }, ...PILOT_GROUPS];
 const LEGACY_GROUPS: Group[] = [{ items: [{ href: "/", label: "Dashboard", permission: "dashboard.programme" }] }, ...PILOT_GROUPS, LEGACY_ADMINISTRATION];
 
-export function staffNav(permissions: readonly string[], newLayout = newLayoutEnabled()): NavGroup[] {
-  const groups = (newLayout ? NEW_GROUPS : LEGACY_GROUPS).map((g) => ({
+// Findable is not the Rotorua pilot: neutral label, and the Rotorua
+// destination-data module is left out of its navigation (the pages and their
+// permission checks are unchanged).
+const FINDABLE_HIDDEN = new Set(["/destination"]);
+function forBrand(groups: Group[], brand: BrandId): Group[] {
+  if (brand !== "findable") return groups;
+  return groups.map((g) => ({
+    label: g.label === "Rotorua pilot" ? "Programme" : g.label,
+    items: g.items.filter((i) => !FINDABLE_HIDDEN.has(i.href)),
+  }));
+}
+
+export function staffNav(permissions: readonly string[], newLayout = newLayoutEnabled(), brand: BrandId = getBrand().id): NavGroup[] {
+  const groups = forBrand(newLayout ? NEW_GROUPS : LEGACY_GROUPS, brand).map((g) => ({
     label: g.label,
     items: g.items.filter((i) => permissions.includes(i.permission)).map(({ href, label, badge }) => ({ href, label, badge })),
   })).filter((g) => g.items.length > 0);

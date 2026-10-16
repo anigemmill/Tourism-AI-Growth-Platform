@@ -9,6 +9,7 @@ import { audit, diff } from "@/lib/audit";
 import { guarded } from "@/lib/actions";
 import { f, parseForm, nullify, type ActionState } from "@/lib/forms";
 import { activeProgramme } from "@/lib/queries";
+import { getBrand } from "@/lib/brand";
 
 const operatorSchema = z.object({
   name: f.str(),
@@ -48,7 +49,9 @@ export async function createOperator(_: ActionState, fd: FormData): Promise<Acti
   if (parsed.error) return parsed.error;
   let id = "";
   const res = await guarded(async () => {
-    const programme = await activeProgramme();
+    // Pilot businesses join the active cohort programme. Findable clients
+    // don't: a programme brings the shared directory and workshops with it.
+    const programme = getBrand().id === "findable" ? null : await activeProgramme();
     const op = await prisma.operator.create({ data: { ...nullify(parsed.data), programmeId: programme?.id ?? null } as never });
     id = op.id;
     await audit(user.id, "create", "operator", op.id, `Created operator ${op.name}`);

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { onboardingSteps } from "@/lib/admin/businesses";
 import { CURRENCIES, formatMoney, invoiceBalance, paymentTotals } from "@/lib/billing/calc";
 import { enabledFeatures, FEATURES, ALL_FEATURES } from "@/lib/rbac/features";
+import { getBrand } from "@/lib/brand";
 import {
   ACCOUNT_STATUS_LABELS, INTERVAL_LABELS, INVOICE_STATUS_LABELS, SUBSCRIPTION_STATUS_LABELS, TXN_KIND_LABELS, TXN_STATUS_LABELS, options,
 } from "@/lib/labels";
@@ -40,12 +41,12 @@ export default async function AdminBusinessPage({ params }: PageProps<"/admin/bu
 
   const canManage = can(me, "businesses.manage");
   const canBill = can(me, "billing.manage");
-  const enabled = new Set(enabledFeatures(b.features));
+  const enabled = new Set(enabledFeatures(b.features, getBrand().id));
   const onboarding = onboardingSteps({
     dataAgreementSignedAt: b.dataAgreementSignedAt, contactEmail: b.contactEmail, programmeId: b.programmeId,
     members: b.members.length, activeMembers: b.members.filter((m) => m.user.status === "ACTIVE").length,
     assessments: b._count.assessments, hasProfile: Boolean(b.profile),
-  });
+  }, getBrand().id);
   const totals = paymentTotals(txns);
   const outstanding = invoices.filter((i) => i.status === "OPEN").reduce((s, i) => s + Math.max(0, invoiceBalance(i, i.transactions)), 0);
   const today = new Date().toISOString().slice(0, 10);

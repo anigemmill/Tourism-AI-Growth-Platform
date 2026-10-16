@@ -4,12 +4,13 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { enabledFeatures, type Feature } from "@/lib/rbac/features";
+import { getBrand } from "@/lib/brand";
 import { can, requireUser, type AuthUser } from "./session";
 
 /** Features enabled for one business, memoised per request. */
 export const featuresFor = cache(async (operatorId: string): Promise<Feature[]> => {
   const rows = await prisma.businessFeature.findMany({ where: { operatorId }, select: { feature: true, enabled: true } });
-  return enabledFeatures(rows);
+  return enabledFeatures(rows, getBrand().id);
 });
 
 /**
