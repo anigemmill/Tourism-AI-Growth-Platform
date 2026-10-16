@@ -877,15 +877,16 @@ model User {
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
-  sessions        AuthSession[]
-  ownedOpps       Opportunity[]        @relation("OpportunityOwner")
-  assignedTasks   Task[]               @relation("TaskAssignee")
-  auditLogs       AuditLog[]
-  businesses      UserBusiness[]
-  permissions     UserPermission[]
-  authTokens      AuthToken[]          @relation("TokenUser")
-  issuedTokens    AuthToken[]          @relation("TokenIssuer")
-  billingRecorded BillingTransaction[]
+  sessions          AuthSession[]
+  supportEditGrants SupportEditGrant[]
+  ownedOpps         Opportunity[]        @relation("OpportunityOwner")
+  assignedTasks     Task[]               @relation("TaskAssignee")
+  auditLogs         AuditLog[]
+  businesses        UserBusiness[]
+  permissions       UserPermission[]
+  authTokens        AuthToken[]          @relation("TokenUser")
+  issuedTokens      AuthToken[]          @relation("TokenIssuer")
+  billingRecorded   BillingTransaction[]
 }
 
 // Many-to-many link between users and businesses (Operator).
@@ -955,6 +956,28 @@ model AuthSession {
   userAgent  String?
   ipAddress  String?
 
+  supportEditGrants SupportEditGrant[]
+
+  @@index([userId])
+}
+
+/// Super Admin "edit on behalf of a client" permission (support view).
+/// Bound to one sign-in session and one business, time-limited and
+/// explicitly revocable. Signing out or revoking the session deletes it.
+/// This row is the authorisation; the audit log only records what happened.
+model SupportEditGrant {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId  String
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  operatorId String
+  operator   Operator    @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([sessionId, operatorId])
   @@index([userId])
 }
 
@@ -1083,33 +1106,34 @@ model Operator {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  assessments   Assessment[]
-  opportunities Opportunity[]
-  projects      Project[]
-  tasks         Task[]
-  experiments   Experiment[]
-  measurements  Measurement[]
-  attendance    WorkshopAttendance[]
-  initiatives   InitiativeParticipant[]
-  learnings     Learning[]
-  workflowUses  WorkflowUsage[]
-  deals         Deal[]
-  costs         CostItem[]
-  risks         Risk[]
-  decisions     DecisionRecord[]
-  signals       Signal[]
-  integrations  IntegrationConnection[]
-  briefs        GrowthBrief[]
-  competitors   Competitor[]
-  contentBriefs ContentBrief[]
-  profile       OperatorProfile?
-  members       UserBusiness[]
-  features      BusinessFeature[]
-  subscriptions Subscription[]
-  invoices      Invoice[]
-  billingTxns   BillingTransaction[]
-  billingEvents BillingEvent[]
+  users             User[]
+  assessments       Assessment[]
+  opportunities     Opportunity[]
+  projects          Project[]
+  tasks             Task[]
+  experiments       Experiment[]
+  measurements      Measurement[]
+  attendance        WorkshopAttendance[]
+  initiatives       InitiativeParticipant[]
+  learnings         Learning[]
+  workflowUses      WorkflowUsage[]
+  deals             Deal[]
+  costs             CostItem[]
+  risks             Risk[]
+  decisions         DecisionRecord[]
+  signals           Signal[]
+  integrations      IntegrationConnection[]
+  briefs            GrowthBrief[]
+  competitors       Competitor[]
+  contentBriefs     ContentBrief[]
+  profile           OperatorProfile?
+  members           UserBusiness[]
+  features          BusinessFeature[]
+  supportEditGrants SupportEditGrant[]
+  subscriptions     Subscription[]
+  invoices          Invoice[]
+  billingTxns       BillingTransaction[]
+  billingEvents     BillingEvent[]
 }
 
 // Portal modules enabled for a business. Keys: src/lib/rbac/features.ts.

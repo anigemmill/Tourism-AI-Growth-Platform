@@ -4,6 +4,7 @@ import { Card, OperatorStatusBadge, PageHeader, Table } from "@/components/ui";
 import { FilterBar, Pager } from "@/components/admin/ListControls";
 import { AccountStatusBadge, fmtDate, SubscriptionBadge } from "@/components/admin/badges";
 import { can, requirePermission } from "@/lib/auth/session";
+import { isSupportAdmin } from "@/lib/support/core";
 import { prisma } from "@/lib/prisma";
 import { oneOf, pageOf, param } from "@/lib/admin/paging";
 import { ACCOUNT_STATUS_LABELS, OPERATOR_STATUS_LABELS, options } from "@/lib/labels";
@@ -54,7 +55,7 @@ export default async function AdminBusinessesPage({ searchParams }: PageProps<"/
       />
       <Card padded={false}>
         <Table>
-          <thead><tr><th>Business</th><th>Account</th><th>Programme</th><th>Users</th>{showBilling && <th>Subscription</th>}<th>Added</th></tr></thead>
+          <thead><tr><th>Business</th><th>Account</th><th>Programme</th><th>Users</th>{showBilling && <th>Subscription</th>}<th>Added</th>{isSupportAdmin(me) && <th><span className="sr-only">Client view</span></th>}</tr></thead>
           <tbody>
             {rows.map((b) => (
               <tr key={b.id}>
@@ -64,6 +65,7 @@ export default async function AdminBusinessesPage({ searchParams }: PageProps<"/
                 <td className="text-sm tabular-nums">{b._count.members}</td>
                 {showBilling && <td className="text-xs">{b.subscriptions?.[0] ? <><SubscriptionBadge s={b.subscriptions[0].status} /><p className="mt-1 text-muted">{b.subscriptions[0].plan}</p></> : <span className="text-muted">None</span>}</td>}
                 <td className="whitespace-nowrap text-xs text-muted">{fmtDate(b.createdAt)}</td>
+                {isSupportAdmin(me) && <td className="whitespace-nowrap"><Link href={`/support/${b.id}`} className="text-xs font-medium text-ink underline underline-offset-4">View as client</Link></td>}
               </tr>
             ))}
           </tbody>

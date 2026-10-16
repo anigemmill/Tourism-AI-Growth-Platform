@@ -157,6 +157,51 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   await statusForm.locator("button:has-text('Change status')").click();
   await check("super admin can suspend a user", await seen(f.getByText(/is now suspended/)));
   await iu.goto(B + "/portal"); await check("suspended user is signed out immediately", /login/.test(iu.url()));
+  // Super Admin client view ("View as client"): read-only by default, edit
+  // mode enforced on the server, exit returns to the back office.
+  await f.goto(B + "/admin/businesses?q=Lakeside");
+  await Promise.all([f.waitForURL(/\/support\//), f.getByRole("link", { name: "View as client" }).first().click()]);
+  const supportUrl = new URL(f.url()).pathname;
+  const bizId = supportUrl.split("/")[2];
+  await check("client view opens the client's portal with a read-only banner", await seen(f.getByText("Client view · read-only")) && await seen(f.getByText("Lakeside Retreat Lodge").first()));
+  await f.goto(B + supportUrl + "/plan"); await check("client view: action plan opens", await seen(f.getByRole("heading", { name: "Your action plan" })));
+  await f.goto(B + supportUrl + "/reports"); await check("client view: reports open", await seen(f.getByRole("heading", { name: "Reports" })));
+  await f.goto(B + supportUrl + "/account");
+  await check("client view is read-only by default (no edit controls)", (await f.getByRole("button", { name: "Save business details" }).count()) === 0);
+  await f.goto(B + supportUrl + "/account?tab=team");
+  await check("client view: no team actions while read-only", (await f.getByRole("button", { name: "Send reset link" }).count()) === 0);
+  // Turn on edit mode (confirmation required)
+  await f.goto(B + supportUrl + "/account");
+  await f.click("summary:has-text('Turn on edit mode')");
+  await check("edit mode needs the confirmation box", await f.locator("input[name=confirm]").first().evaluate((el) => el.required));
+  await f.check("input[name=confirm]"); await f.click("button:has-text('Turn on edit mode')");
+  await check("edit mode turns on", await seen(f.getByText("Editing on behalf of the client")));
+  await f.reload();
+  await check("edit form appears in edit mode", await seen(f.getByRole("button", { name: "Save business details" })));
+  // Turn edit mode off in a second tab, then submit the stale form in the first: the server must refuse.
+  const f2 = await f.context().newPage(); f2.setDefaultTimeout(T);
+  await f2.goto(B + supportUrl + "/account"); await f2.click("button:has-text('Turn off edit mode')");
+  await seen(f2.getByText("Client view · read-only"));
+  await f.fill("#f-contactPhone", "021 000 0000"); await f.click("button:has-text('Save business details')");
+  await check("stale edit form is refused by the server after edit mode ends", await seen(status(f).filter({ hasText: /Edit mode is off or has expired/ })));
+  // Edit for real
+  await f2.click("summary:has-text('Turn on edit mode')"); await f2.check("input[name=confirm]"); await f2.click("button:has-text('Turn on edit mode')");
+  await seen(f2.getByText("Editing on behalf of the client"));
+  await f.reload(); await f.fill("#f-contactPhone", "021 555 0101"); await f.click("button:has-text('Save business details')");
+  await check("authorised edit saves", await seen(status(f).filter({ hasText: /Business details saved/ })));
+  await f.goto(B + "/admin/businesses/" + bizId);
+  await check("edit is visible in the back office", await seen(f.getByText("021 555 0101")));
+  await f.goto(B + supportUrl);
+  await Promise.all([f.waitForURL(/\/admin\/businesses\//), f.click("button:has-text('Exit to back office')")]);
+  await check("exit returns to the business in the back office", new URL(f.url()).pathname === "/admin/businesses/" + bizId);
+  await f.goto(B + supportUrl + "/account");
+  await check("exit ends edit mode", await seen(f.getByText("Client view · read-only")) && (await f.getByRole("button", { name: "Save business details" }).count()) === 0);
+  await f2.close();
+  await f.goto(B + "/governance/audit");
+  await check("client-view access and edits are in the audit log", await seen(f.getByText(/on behalf of the client/).first()) && await seen(f.getByText(/Entered edit mode/).first()));
+  // Nobody else gets in: platform staff and operators are turned away on the server.
+  await p.goto(B + supportUrl); await check("platform staff can't open the client view", new URL(p.url()).pathname === "/no-access");
+
   // Forgot password never reveals whether an account exists
   const fp = await (await b.newContext()).newPage();
   await fp.goto(B + "/forgot-password"); await fp.fill("#email", `nobody-${stamp}@demo.example`); await fp.click("button:has-text('Send reset link')");
@@ -167,6 +212,7 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   const o = await login(b, "operator1@demo.example", "demo-pass-12345"); lastPage = o;
   await check("operator export forbidden", (await o.request.get(B + "/api/export?entity=all")).status() === 403);
   await check("operator report forbidden", (await o.request.get(B + "/api/reports?type=founder")).status() === 403);
+  await o.goto(B + "/support/" + bizId); await check("operators can't open the client view", new URL(o.url()).pathname === "/portal");
   await o.goto(B + "/portal");
   await o.fill("#f-title", "Lots of rain cancellations"); await o.fill("#f-summary", "Three cancellations"); await o.click("button:has-text('Send update')");
   await check("operator can submit an update", await seen(status(o).filter({ hasText: /Thanks/ })));

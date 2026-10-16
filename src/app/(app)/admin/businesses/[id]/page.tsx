@@ -5,6 +5,7 @@ import {
 } from "@/components/ui";
 import { AccountStatusBadge, fmtDate, fmtDateTime, InvoiceBadge, RoleBadge, SourceBadge, SubscriptionBadge, TxnStatusBadge, UserStatusBadge } from "@/components/admin/badges";
 import { can, requirePermission } from "@/lib/auth/session";
+import { isSupportAdmin } from "@/lib/support/core";
 import { prisma } from "@/lib/prisma";
 import { onboardingSteps } from "@/lib/admin/businesses";
 import { CURRENCIES, formatMoney, invoiceBalance, paymentTotals } from "@/lib/billing/calc";
@@ -62,6 +63,7 @@ export default async function AdminBusinessPage({ params }: PageProps<"/admin/bu
             <span className="ml-2 text-xs text-muted">Programme</span> <OperatorStatusBadge s={b.status} />
             {can(me, "operators.view") && <ButtonLink href={`/operators/${b.id}`} variant="secondary">Programme record</ButtonLink>}
             {can(me, "operators.edit") && <ButtonLink href={`/operators/${b.id}/edit`} variant="secondary">Edit profile</ButtonLink>}
+            {isSupportAdmin(me) && <ButtonLink href={`/support/${b.id}`} variant="dark">View as client</ButtonLink>}
           </div>
         }
       />

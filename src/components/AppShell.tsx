@@ -47,7 +47,12 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const isActive = (href: string) => (href === "/" || href === "/portal" || href === "/admin" ? pathname === href : pathname.startsWith(href));
+  // Highlight the most specific matching item only (e.g. /support/x/account,
+  // not also /support/x). Root-like sections match exactly.
+  const matches = (href: string) =>
+    href === "/" || href === "/portal" || href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+  const best = nav.flatMap((g) => g.items.map((i) => i.href)).filter(matches).sort((a, b) => b.length - a.length)[0];
+  const isActive = (href: string) => href === best;
   const wordmark = (
     <span className="wordmark text-[22px] leading-none">
       {brandName}
