@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { cx } from "./primitives";
 
 const inputCls =
-  "block w-full rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-60";
+  "block w-full rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-subtle focus:border-(--focus) focus:outline-none focus:ring-2 focus:ring-(--focus)/25 disabled:opacity-60";
 
 interface BaseProps {
   name: string;

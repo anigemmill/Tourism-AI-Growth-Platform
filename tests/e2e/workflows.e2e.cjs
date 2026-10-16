@@ -124,7 +124,7 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
 
   // Super admin console: dashboard, invite with a one-time link (no email configured locally)
   await f.goto(B + "/admin");
-  await check("super admin dashboard shows account totals", await seen(f.getByText("Active businesses")));
+  await check("super admin dashboard shows account totals", await seen(f.getByText("Business at a glance")));
   await f.goto(B + "/admin/users");
   const inviteEmail = `e2e-invite-${stamp}@demo.example`;
   await f.fill("#f-name", "E2E Invitee"); await f.fill("#f-email", inviteEmail); await f.selectOption("#f-role", "OPERATOR");
@@ -143,7 +143,7 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   const iu = await login(b, inviteEmail, "invited-user-pass-1");
   await check("invited operator lands in the portal", new URL(iu.url()).pathname === "/portal");
   await iu.goto(B + "/admin"); await check("operator cannot open the admin console", new URL(iu.url()).pathname === "/portal");
-  await iu.goto(B + "/portal/account");
+  await iu.goto(B + "/portal/account?tab=security");
   await check("operator can manage their own account", await seen(iu.getByText("Where you're signed in")));
   // Suspend the invited user (requires the confirmation box)
   await f.goto(B + "/admin/users?q=" + encodeURIComponent(inviteEmail));

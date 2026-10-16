@@ -1,5 +1,7 @@
-import { ActionForm, Badge, Card, DefinitionList, EmptyState, HorizonBadge, IllustrativeBadge, Notice, OppStatusBadge, PageHeader, Select, Table, TextArea, TextField, WorkStatusBadge, ExperimentStatusBadge } from "@/components/ui";
+import Link from "next/link";
+import { ActionForm, Badge, ButtonLink, Card, DefinitionList, EmptyState, IllustrativeBadge, Notice, PageHeader, Select, Stat, Table, TextArea, TextField, WorkStatusBadge, ExperimentStatusBadge } from "@/components/ui";
 import { BriefView } from "@/components/BriefView";
+import { MoveCard, isDone } from "@/components/portal/MoveCard";
 import { requireOperator } from "@/lib/auth/portal";
 import { can } from "@/lib/auth/session";
 import {
@@ -7,7 +9,7 @@ import {
 } from "@/lib/dal/portal";
 import { roadmapOrder } from "@/lib/domain/prioritise";
 import { compareMeasurements } from "@/lib/domain/results";
-import { AREA_LABELS, METRIC_LABELS, SOLUTION_LABELS } from "@/lib/labels";
+import { AREA_LABELS, METRIC_LABELS } from "@/lib/labels";
 import { formatDate, formatNum, formatShortDate } from "@/lib/format";
 import { submitSignal } from "./actions";
 
@@ -16,7 +18,7 @@ export default async function PortalHome() {
   if (!features.includes("portal.dashboard")) {
     return (
       <div>
-        <PageHeader eyebrow="Tourism AI Growth Pilot" title="Your portal" description="The business dashboard isn't enabled for your business. Contact the programme team if you need it." />
+        <PageHeader eyebrow="Your portal" title="Your portal" description="The business dashboard isn't enabled for your business. Contact the programme team if you need it." />
       </div>
     );
   }
@@ -26,22 +28,48 @@ export default async function PortalHome() {
     portalBusiness(actor), portalOpportunities(actor), portalTasks(actor), portalProjects(actor),
     portalMeasurements(actor), portalExperiments(actor), portalAssessment(actor), portalBriefs(actor),
   ]);
-  const roadmap = roadmapOrder(opps.filter((o) => o.horizon !== "IGNORE"));
+  const roadmap = roadmapOrder(opps.filter((o) => o.horizon !== "IGNORE" && o.status !== "REJECTED"));
+  const nextMoves = roadmap.filter((o) => !isDone(o.status)).slice(0, 3);
   const results = compareMeasurements(measurements);
   const open = tasks.filter((t) => !["DONE", "CANCELLED"].includes(t.status));
+  const doneTasks = tasks.filter((t) => t.status === "DONE").length;
+  const liveTasks = tasks.filter((t) => t.status !== "CANCELLED").length;
+  const runningExperiments = experiments.filter((e) => e.status === "RUNNING").length;
 
   return (
     <div>
-      <PageHeader eyebrow="Tourism AI Growth Pilot" title={biz.name} description="Your roadmap, actions and results. Only you and the programme team can see your business information." />
+      <PageHeader
+        eyebrow={[biz.programme?.name, briefs[0] ? `Latest brief ${formatDate(briefs[0].weekOf)}` : null].filter(Boolean).join(" · ") || "Your business"}
+        title={`${greeting()}, ${user.name.split(" ")[0]}.`}
+        description={`${biz.name} — your plan, actions and results. Only you and the programme team can see your business information.`}
+        actions={<><ButtonLink href="/portal/reports">Reports</ButtonLink><ButtonLink href="/portal/plan" variant="dark">See your plan →</ButtonLink></>}
+      />
       {biz.isSynthetic && <div className="mb-6"><Notice tone="warning">Demo account: this is a synthetic business with illustrative data.</Notice></div>}
+
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Actions done" value={<>{doneTasks}<span className="ml-1.5 text-base font-medium tracking-normal opacity-60">of {liveTasks}</span></>} sub={liveTasks ? `${open.length} still open` : "No actions yet"} variant="highlight" href="/portal/plan" />
+        <Stat label="On your plan" value={roadmap.filter((o) => !isDone(o.status)).length} sub={`${roadmap.filter((o) => isDone(o.status)).length} done`} href="/portal/plan" />
+        <Stat label="Experiments running" value={runningExperiments} sub={`${experiments.length} in total`} />
+        <Stat label="Results tracked" value={results.length} sub={results.length ? "Baselines with a latest figure" : "No measurements yet"} />
+      </div>
+
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <Card title="Your top 3 moves" actions={<Link href="/portal/plan" className="text-xs font-medium text-ink underline underline-offset-4">Full plan</Link>}>
+          {nextMoves.length === 0 ? <EmptyState title="Your plan is being prepared">The programme team adds moves after your assessment.</EmptyState> : (
+            <div className="space-y-3">{nextMoves.map((m, i) => <MoveCard key={m.id} move={m} index={i + 1} />)}</div>
+          )}
+        </Card>
+        {briefs[0] ? (
+          <Card title="This week's growth brief" description={`Reviewed by the programme team · week of ${formatDate(briefs[0].weekOf)}`} actions={<Link href="/portal/reports" className="text-xs font-medium text-ink underline underline-offset-4">All reports</Link>}>
+            <BriefView brief={briefs[0]} />
+          </Card>
+        ) : (
+          <Card title="This week's growth brief"><EmptyState title="No brief shared yet">Your first weekly brief appears here once the programme team has reviewed it.</EmptyState></Card>
+        )}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {briefs[0] && (
-            <Card title="This week's growth brief" description={`Reviewed by the programme team · week of ${formatDate(briefs[0].weekOf)}`}>
-              <BriefView brief={briefs[0]} />
-            </Card>
-          )}
           <Card title="Your actions" description={`${open.length} open`} padded={false}>
             {tasks.length === 0 ? <div className="p-5"><EmptyState title="No actions assigned yet" /></div> : (
               <Table>
@@ -52,23 +80,6 @@ export default async function PortalHome() {
                       <td><p className="font-medium">{t.title}</p>{t.project && <p className="text-xs text-muted">{t.project.title}</p>}</td>
                       <td className="text-muted">{formatShortDate(t.dueDate)}</td>
                       <td><WorkStatusBadge s={t.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </Card>
-          <Card title="Your AI opportunity roadmap" padded={false}>
-            {roadmap.length === 0 ? <div className="p-5"><EmptyState title="Your roadmap is being prepared" /></div> : (
-              <Table>
-                <thead><tr><th>Opportunity</th><th>Approach</th><th>When</th><th>Status</th></tr></thead>
-                <tbody>
-                  {roadmap.map((o) => (
-                    <tr key={o.id}>
-                      <td><p className="font-medium">{o.title}</p><p className="text-xs text-muted">{o.problem}</p></td>
-                      <td className="text-xs text-muted">{SOLUTION_LABELS[o.solutionType]}</td>
-                      <td><HorizonBadge h={o.horizon} /></td>
-                      <td><OppStatusBadge s={o.status} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -136,4 +147,9 @@ export default async function PortalHome() {
       </div>
     </div>
   );
+}
+
+function greeting() {
+  const hour = Number(new Intl.DateTimeFormat("en-NZ", { hour: "numeric", hour12: false, timeZone: "Pacific/Auckland" }).format(new Date()));
+  return hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkDatabaseUrl, normalizeDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
+import { checkDatabaseUrl, normalizeDatabaseUrl, pointsAtProduction, withConnectTimeout } from "./database-url.mjs";
 
 const HOST = "aws-0-ap-southeast-2.pooler.supabase.com";
 const direct = (pw) => `postgresql://postgres.abcref:${pw}@${HOST}:5432/postgres`;
@@ -91,4 +91,11 @@ test("normalizeDatabaseUrl adds pooler params to DATABASE_URL only", () => {
   assert.equal(normalizeDatabaseUrl("DATABASE_URL", pooled("pw")).value, pooled("pw"));
   assert.equal(normalizeDatabaseUrl("DIRECT_URL", direct("pw")).value, direct("pw"));
   assert.deepEqual(normalizeDatabaseUrl("DIRECT_URL", direct("pw")).notes, []);
+});
+
+test("staging guard recognises the production project in either URL", () => {
+  assert.equal(pointsAtProduction([direct("pw").replace("abcref", "hescoabpcjukmgeopjnq"), undefined]), true);
+  assert.equal(pointsAtProduction([undefined, "postgresql://postgres.hescoabpcjukmgeopjnq:x@db.example:5432/postgres"]), true);
+  assert.equal(pointsAtProduction([direct("pw"), pooled("pw")]), false);
+  assert.equal(pointsAtProduction([undefined, undefined]), false);
 });

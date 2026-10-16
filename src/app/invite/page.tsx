@@ -4,6 +4,7 @@ import { NewPasswordForm } from "@/components/auth/AccountForms";
 import { InvalidLink } from "@/components/auth/InvalidLink";
 import { peekToken } from "@/lib/auth/account-tokens";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
+import { getBrand } from "@/lib/brand";
 
 export const metadata: Metadata = { title: "Accept your invitation", referrer: "no-referrer" };
 
@@ -14,7 +15,7 @@ export default async function InvitePage({ searchParams }: PageProps<"/invite">)
     <AuthShell>
       {t && t.user.status === "PENDING" ? (
         <>
-          <AuthHeading title="Welcome to Tourism AI Growth OS">Set a password to activate your account for {t.user.email}.</AuthHeading>
+          <AuthHeading title={`Welcome to ${getBrand().product}`}>Set a password to activate your account for {t.user.email}.</AuthHeading>
           <NewPasswordForm token={token as string} mode="invite" minLength={MIN_PASSWORD_LENGTH} name={t.user.name} />
         </>
       ) : (

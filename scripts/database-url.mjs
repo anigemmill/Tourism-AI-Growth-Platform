@@ -155,3 +155,12 @@ export function normalizeDatabaseUrl(name, value) {
   }
   return { value: v, notes };
 }
+
+// Supabase project ref of the production database (not a secret: it is the
+// identifier that appears in the connection username and hostnames).
+export const PRODUCTION_DB_REF = "hescoabpcjukmgeopjnq";
+
+/** True if any of the URLs points at the production Supabase project. */
+export function pointsAtProduction(values) {
+  return values.some((v) => typeof v === "string" && v.includes(PRODUCTION_DB_REF));
+}

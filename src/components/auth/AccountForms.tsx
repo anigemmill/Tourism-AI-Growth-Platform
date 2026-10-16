@@ -7,7 +7,7 @@
 import { startTransition, useActionState, type ReactNode } from "react";
 import type { ActionState } from "@/lib/forms";
 import { acceptInvitation, confirmEmail, forgotPassword, resetPassword } from "@/app/actions/account";
-import { authButtonClass } from "./AuthShell";
+import { authButtonClass } from "./styles";
 import { AuthField, PasswordField } from "./fields";
 import { Spinner } from "./Spinner";
 

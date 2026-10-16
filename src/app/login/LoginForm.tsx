@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useActionState } from "react";
 import { login } from "@/app/actions/auth";
-import { authButtonClass } from "@/components/auth/AuthShell";
+import { authButtonClass } from "@/components/auth/styles";
 import { AuthField, PasswordField } from "@/components/auth/fields";
 import { Spinner } from "@/components/auth/Spinner";
 
@@ -25,7 +26,14 @@ export function LoginForm({ next }: { next?: string }) {
     >
       {next && <input type="hidden" name="next" value={next} />}
       <AuthField id="email" name="email" type="email" label="Email" autoComplete="username" required />
-      <PasswordField id="password" name="password" label="Password" autoComplete="current-password" required />
+      <PasswordField
+        id="password"
+        name="password"
+        label="Password"
+        autoComplete="current-password"
+        required
+        labelAction={<Link href="/forgot-password" className="text-accent underline decoration-line-strong underline-offset-4 hover:decoration-current">Forgot password?</Link>}
+      />
       {state?.error && (
         <p role="alert" className="rounded-xl border border-danger/25 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">{state.error}</p>
       )}

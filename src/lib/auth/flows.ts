@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import type { AuthTokenPurpose } from "@/generated/prisma";
 import { audit } from "@/lib/audit";
 import { appUrl, emailConfigured, sendEmail } from "@/lib/email";
+import { getBrand } from "@/lib/brand";
 import { consumeToken, issueToken, revokeTokens, TOKEN_TTL_MS } from "./account-tokens";
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "./password";
 import { revokeUserSessions } from "./core";
@@ -40,22 +41,25 @@ function hours(purpose: AuthTokenPurpose) {
 
 function emailFor(purpose: AuthTokenPurpose, name: string, link: string, invitedBy?: string) {
   const greeting = `Kia ora ${name},`;
-  const footer = `\n\nThis link works once and expires in ${hours(purpose)}. If you weren't expecting this email you can ignore it.\n\n— Outside In · Tourism AI Growth OS`;
+  const brand = getBrand();
+  const product = brand.product;
+  const signature = brand.id === "findable" ? "— Findable" : "— Outside In · Tourism AI Growth OS";
+  const footer = `\n\nThis link works once and expires in ${hours(purpose)}. If you weren't expecting this email you can ignore it.\n\n${signature}`;
   switch (purpose) {
     case "INVITE":
       return {
-        subject: "You're invited to Tourism AI Growth OS",
-        text: `${greeting}\n\n${invitedBy ? `${invitedBy} has invited you` : "You've been invited"} to Tourism AI Growth OS. Set your password to activate your account:\n\n${link}${footer}`,
+        subject: `You're invited to ${product}`,
+        text: `${greeting}\n\n${invitedBy ? `${invitedBy} has invited you` : "You've been invited"} to ${product}. Set your password to activate your account:\n\n${link}${footer}`,
       };
     case "PASSWORD_RESET":
       return {
-        subject: "Reset your Tourism AI Growth OS password",
+        subject: `Reset your ${product} password`,
         text: `${greeting}\n\nWe received a request to reset your password. Choose a new one here:\n\n${link}${footer}`,
       };
     case "EMAIL_VERIFY":
       return {
         subject: "Confirm your email address",
-        text: `${greeting}\n\nConfirm this is your email address for Tourism AI Growth OS:\n\n${link}${footer}`,
+        text: `${greeting}\n\nConfirm this is your email address for ${product}:\n\n${link}${footer}`,
       };
   }
 }

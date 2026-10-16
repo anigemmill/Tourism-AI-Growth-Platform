@@ -7,7 +7,17 @@ import type { Permission } from "@/lib/rbac/permissions";
 type Item = { href: string; label: string; badge?: string; permission: Permission };
 
 const GROUPS: { label?: string; items: Item[] }[] = [
-  { items: [{ href: "/", label: "Dashboard", permission: "dashboard.programme" }] },
+  {
+    label: "Back office",
+    items: [
+      { href: "/admin", label: "Overview", permission: "admin.dashboard" },
+      { href: "/admin/businesses", label: "Clients", permission: "businesses.view" },
+      { href: "/admin/billing", label: "Billing", permission: "billing.view" },
+      { href: "/admin/users", label: "Users & access", permission: "users.view" },
+      { href: "/admin/access", label: "Roles & permissions", permission: "users.roles" },
+    ],
+  },
+  { label: "Rotorua pilot", items: [{ href: "/", label: "Programme dashboard", permission: "dashboard.programme" }] },
   {
     label: "Operators",
     items: [
@@ -41,16 +51,6 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/governance", label: "Risks & decisions", permission: "governance.view" },
       { href: "/governance/audit", label: "Audit log", permission: "audit.view" },
       { href: "/export", label: "Data export", permission: "data.export" },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
-      { href: "/admin", label: "Admin overview", permission: "admin.dashboard" },
-      { href: "/admin/users", label: "Users", permission: "users.view" },
-      { href: "/admin/businesses", label: "Businesses", permission: "businesses.view" },
-      { href: "/admin/billing", label: "Billing", permission: "billing.view" },
-      { href: "/admin/access", label: "Roles & permissions", permission: "users.roles" },
     ],
   },
 ];

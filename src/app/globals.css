@@ -34,6 +34,31 @@
   --info: #2c5394;
   --info-soft: #e4ebf7;
   --focus: #ff5a1f;
+
+  /* Role tokens (brand-specific values below). */
+  --primary: var(--brand);        /* primary button fill */
+  --primary-ink: var(--brand-ink);
+  --meter: var(--brand);          /* progress bars */
+  --eyebrow-bg: var(--brand-soft);
+  --eyebrow-dot: var(--brand);
+  --wordmark-dot: var(--brand);
+  --violet: #6d5bd0;
+  --sky: #2d5bea;
+  --sidebar: var(--canvas);
+  --sidebar-ink: var(--ink);
+  --sidebar-muted: var(--muted);
+  --sidebar-subtle: var(--subtle);
+  --sidebar-hover: var(--surface);
+  --sidebar-active: var(--lime);
+  --sidebar-active-ink: var(--lime-ink);
+  --sidebar-card: var(--surface);
+  --sidebar-line: var(--line);
+  --font-sans-stack: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono-stack: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display-stack: var(--font-display-serif), Georgia, serif;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
+  --radius-card: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,6 +94,81 @@
   }
 }
 
+/* Findable (commercial product) — from the Findable wireframes. Light only:
+   the attribute selector outranks the dark-mode :root block above. */
+:root[data-brand="findable"] {
+  color-scheme: light;
+  --canvas: #e7e4fc;            /* lavender */
+  --surface: #fffff2;           /* cream cards */
+  --surface-2: #f6f5e8;
+  --ink: #15161a;
+  --muted: #5a5b60;
+  --subtle: #7d7e84;
+  --line: #e6e3d6;
+  --line-strong: #cfccc0;
+  --accent: #1e4b3a;            /* forest */
+  --accent-ink: #fffff2;
+  --accent-soft: #ddfbb3;
+  --brand: #d6f36b;             /* lime */
+  --brand-ink: #15161a;
+  --brand-soft: #eef9c4;
+  --lime: #d6f36b;
+  --lime-ink: #15161a;
+  --night: #15161a;
+  --night-ink: #fffff2;
+  --night-line: #2a2b31;
+  --success: #1e6b45;
+  --success-soft: #ddfbb3;
+  --warning: #8a5300;
+  --warning-soft: #fdefcf;
+  --danger: #b8391f;
+  --danger-soft: #fde5df;
+  --info: #2d5bea;
+  --info-soft: #e3e9fd;
+  --focus: #2d5bea;
+  --violet: #7c6cf2;
+  --sky: #2d5bea;
+
+  --primary: #15161a;
+  --primary-ink: #fffff2;
+  --meter: #1e4b3a;
+  --eyebrow-bg: transparent;
+  --eyebrow-dot: #1e4b3a;
+  --wordmark-dot: #d6f36b;
+
+  /* Client sidebar: near-black. */
+  --sidebar: #15161a;
+  --sidebar-ink: #fffff2;
+  --sidebar-muted: #c9cacf;
+  --sidebar-subtle: #8f9096;
+  --sidebar-hover: #24252b;
+  --sidebar-active: #d6f36b;
+  --sidebar-active-ink: #15161a;
+  --sidebar-card: #24252b;
+  --sidebar-line: #2a2b31;
+
+  --font-sans-stack: var(--font-inter), system-ui, sans-serif;
+  --font-mono-stack: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-display-stack: var(--font-inter-tight), var(--font-inter), system-ui, sans-serif;
+  --display-weight: 700;
+  --display-tracking: -0.035em;
+  --radius-card: 0.875rem;
+}
+
+/* Findable back office: forest sidebar on a cream canvas. */
+:root[data-brand="findable"] [data-shell="backoffice"] {
+  --canvas: #fffff2;
+  --surface: #ffffff;
+  --sidebar: #1e4b3a;
+  --sidebar-muted: #d5e6dc;
+  --sidebar-subtle: #a9c7b8;
+  --sidebar-hover: #24584a;
+  --sidebar-active: #fffff2;
+  --sidebar-active-ink: #15161a;
+  --sidebar-card: #24584a;
+  --sidebar-line: #2c6253;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
@@ -97,23 +197,50 @@
   --color-night: var(--night);
   --color-night-ink: var(--night-ink);
   --color-night-line: var(--night-line);
-  --font-display: var(--font-display-serif);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-meter: var(--meter);
+  --color-violet: var(--violet);
+  --color-sky: var(--sky);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-subtle: var(--sidebar-subtle);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-ink: var(--sidebar-active-ink);
+  --color-sidebar-card: var(--sidebar-card);
+  --color-sidebar-line: var(--sidebar-line);
+  --font-display: var(--font-display-stack);
+  --font-sans: var(--font-sans-stack);
+  --font-mono: var(--font-mono-stack);
 }
 
 body {
   background: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-sans-stack);
   font-feature-settings: "ss01";
 }
 
 .font-display {
-  font-family: var(--font-display-serif), Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display-stack);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
 }
+
+/* The Findable display face is upright; the pilot's serif uses italics for emphasis. */
+:root[data-brand="findable"] .font-display,
+:root[data-brand="findable"] .font-display em,
+:root[data-brand="findable"] .mark-lime { font-style: normal; }
+
+/* Big numbers on stat tiles: mono for the pilot, heavy display for Findable. */
+.stat-value { font-family: var(--font-mono-stack); font-size: 1.85rem; font-weight: 500; letter-spacing: -0.025em; }
+:root[data-brand="findable"] .stat-value { font-family: var(--font-display-stack); font-size: 2.6rem; font-weight: 800; letter-spacing: -0.045em; }
+
+.wordmark { font-weight: 600; letter-spacing: -0.02em; }
+:root[data-brand="findable"] .wordmark { font-family: var(--font-display-stack); font-weight: 800; letter-spacing: -0.045em; }
+.wordmark-dot { color: var(--wordmark-dot); }
 
 /* Lime marker under an emphasised word, as in the brand references. */
 .mark-lime {
@@ -122,10 +249,17 @@ body {
 }
 
 .eyebrow {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-mono-stack);
   font-size: 10.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* Findable auth panel: near-black with a soft lime glow. */
+.auth-night {
+  background:
+    radial-gradient(90% 60% at 100% 0%, rgba(214, 243, 107, 0.10) 0%, rgba(214, 243, 107, 0) 60%),
+    #15161a;
 }
 
 /* Auth brand panel: pale cream → muted peach → coral, ending on the brand
@@ -147,3 +281,7 @@ body {
   body { background: #fff; }
   main { padding: 0 !important; max-width: none !important; }
 }
+
+/* Findable auth controls: pill button, white inputs on lavender. */
+:root[data-brand="findable"] .auth-btn { height: 3rem; border-radius: 999px; }
+:root[data-brand="findable"] .auth-input { height: 3rem; border-radius: 0.75rem; background: #ffffff; }

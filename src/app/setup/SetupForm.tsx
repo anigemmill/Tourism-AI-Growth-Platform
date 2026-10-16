@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState } from "react";
-import { authButtonClass } from "@/components/auth/AuthShell";
+import { authButtonClass } from "@/components/auth/styles";
 import { AuthField, PasswordField } from "@/components/auth/fields";
 import { Spinner } from "@/components/auth/Spinner";
 import { runSetup } from "./actions";

@@ -1,4 +1,6 @@
-// Outside In design system — layout & display primitives (server-safe).
+// Design system — layout & display primitives (server-safe). Colours come
+// from brand tokens in globals.css (Outside In by default, Findable when
+// PRODUCT_BRAND=findable).
 
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -25,8 +27,8 @@ export function PageHeader({
     <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         {eyebrow && (
-          <div className="eyebrow mb-3 inline-flex items-center gap-2 rounded-full bg-brand-soft px-2.5 py-1 text-ink/80 [&_a]:hover:underline">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden />
+          <div className="eyebrow mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--eyebrow-bg)] px-2.5 py-1 text-ink/80 [&_a]:hover:underline">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eyebrow-dot)]" aria-hidden />
             {eyebrow}
           </div>
         )}
@@ -82,7 +84,7 @@ export function Card({
   );
 }
 
-export type StatVariant = "plain" | "orange" | "forest" | "night" | "lime";
+export type StatVariant = "plain" | "orange" | "forest" | "night" | "lime" | "highlight" | "alert";
 
 export function Stat({
   label,
@@ -108,24 +110,28 @@ export function Stat({
     forest: "bg-accent-soft text-ink",
     night: "bg-night text-night-ink",
     lime: "bg-lime/20 text-ink",
+    highlight: "bg-lime text-lime-ink",
+    alert: "border border-danger/60 bg-surface text-ink",
   };
   const chips: Record<StatVariant, string> = {
     plain: "bg-surface-2 text-muted",
     orange: "bg-brand text-brand-ink",
     forest: "bg-accent text-accent-ink",
     night: "bg-lime text-lime-ink",
+    highlight: "bg-night text-night-ink",
+    alert: "bg-danger-soft text-danger",
     lime: "bg-lime text-lime-ink",
   };
   const valueTone =
-    variant !== "plain" ? "" : tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : "text-ink";
+    variant === "alert" ? "text-danger" : variant !== "plain" ? "" : tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : "text-ink";
   const subTone = variant === "plain" ? "text-subtle" : "opacity-75";
   const inner = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className={cx("eyebrow", variant === "plain" ? "text-muted" : "opacity-80")}>{label}</p>
+        <p className={cx("eyebrow", variant === "plain" ? "text-muted" : variant === "alert" ? "text-danger" : "opacity-80")}>{label}</p>
         {icon && <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", chips[variant])}>{icon}</span>}
       </div>
-      <p className={cx("mt-3 font-mono text-[1.85rem] font-medium leading-none tracking-tight tabular-nums", valueTone)}>{value}</p>
+      <p className={cx("stat-value mt-3 leading-none tabular-nums", valueTone)}>{value}</p>
       {sub && <p className={cx("mt-2 text-xs", subTone)}>{sub}</p>}
     </>
   );
@@ -235,7 +241,7 @@ export function buttonClass(variant: "primary" | "secondary" | "ghost" | "danger
     "inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
   const sz = size === "sm" ? "h-7 px-3 text-xs" : "h-9 px-4 text-sm";
   const v = {
-    primary: "bg-brand text-brand-ink shadow-[inset_0_-1px_0_rgba(0,0,0,0.15)] hover:brightness-95",
+    primary: "bg-primary text-primary-ink shadow-[inset_0_-1px_0_rgba(0,0,0,0.15)] hover:brightness-95",
     dark: "bg-night text-night-ink hover:opacity-90",
     secondary: "border border-ink/80 bg-transparent text-ink hover:bg-ink hover:text-canvas",
     ghost: "text-muted hover:bg-surface-2 hover:text-ink",
@@ -298,7 +304,7 @@ export function Progress({ value, max, label }: { value: number; max: number; la
   return (
     <div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2 ring-1 ring-inset ring-line" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={label}>
-        <div className="h-full rounded-full bg-brand" style={{ width: `${p}%` }} />
+        <div className="h-full rounded-full bg-meter" style={{ width: `${p}%` }} />
       </div>
     </div>
   );

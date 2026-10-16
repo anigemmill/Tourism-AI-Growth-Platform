@@ -19,7 +19,8 @@ export async function portalBusiness(actor: Actor) {
       id: true, name: true, category: true, status: true, websiteUrl: true, bookingUrl: true, experiences: true,
       targetMarkets: true, marketingChannels: true, objectives: true, challenges: true, aiMaturity: true,
       agreedScope: true, dataAgreementSignedAt: true, consentCohortSharing: true, consentAggregate: true, consentCaseStudy: true,
-      dataRetentionNotes: true, isSynthetic: true, programmeId: true,
+      dataRetentionNotes: true, isSynthetic: true, programmeId: true, cohort: true,
+      contactName: true, contactEmail: true, contactPhone: true, programme: { select: { name: true } },
     },
   });
 }
@@ -60,9 +61,46 @@ export async function portalAssessment(actor: Actor) {
   });
 }
 
-export async function portalBriefs(actor: Actor) {
+export async function portalBriefs(actor: Actor, take = 4) {
   const operatorId = requireOperator(actor);
-  return prisma.growthBrief.findMany({ where: { operatorId, status: "SHARED" }, orderBy: { weekOf: "desc" }, take: 4 });
+  return prisma.growthBrief.findMany({ where: { operatorId, status: "SHARED" }, orderBy: { weekOf: "desc" }, take });
+}
+
+/** People linked to the operator's current business (read-only). */
+export async function portalTeam(actor: Actor) {
+  const operatorId = requireOperator(actor);
+  const rows = await prisma.userBusiness.findMany({
+    where: { operatorId, user: { status: { in: ["ACTIVE", "PENDING"] } } },
+    orderBy: [{ isPrimaryContact: "desc" }, { createdAt: "asc" }],
+    // No credentials, tokens or other businesses' links.
+    select: { isPrimaryContact: true, user: { select: { id: true, name: true, role: true, status: true, lastLoginAt: true } } },
+  });
+  return rows.map((r) => ({ ...r.user, isPrimaryContact: r.isPrimaryContact }));
+}
+
+/**
+ * The operator's own subscriptions and invoices (read-only). Admin notes,
+ * provider references and other businesses' records are never selected.
+ */
+export async function portalBilling(actor: Actor) {
+  const operatorId = requireOperator(actor);
+  const [subscriptions, invoices] = await Promise.all([
+    prisma.subscription.findMany({
+      where: { operatorId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, plan: true, status: true, interval: true, amountCents: true, currency: true, renewalDate: true, source: true },
+    }),
+    prisma.invoice.findMany({
+      where: { operatorId, status: { not: "DRAFT" } },
+      orderBy: { issuedAt: "desc" },
+      take: 24,
+      select: {
+        id: true, number: true, status: true, amountCents: true, currency: true, issuedAt: true, dueAt: true, source: true,
+        transactions: { select: { kind: true, status: true, amountCents: true, source: true } },
+      },
+    }),
+  ]);
+  return { subscriptions, invoices };
 }
 
 export async function portalLearnings(actor: Actor) {

@@ -159,3 +159,22 @@ test("expired sessions are rejected and removed", async () => {
   assert.equal(await userForToken(token), null);
   assert.equal(await prisma.authSession.count({ where: { tokenHash: hashToken(token) } }), 0);
 });
+
+test("portal team and billing views are scoped to the operator's own business", async () => {
+  await prisma.invoice.create({ data: { operatorId: B, number: `B-INV-${tag}`, amountCents: 1000, issuedAt: new Date(), notes: "SECRET-B-BILLING-NOTE" } });
+  await prisma.invoice.create({ data: { operatorId: A, number: `A-INV-${tag}`, amountCents: 2000, issuedAt: new Date(), notes: "SECRET-A-ADMIN-NOTE", providerRef: "prov_secret" } });
+  try {
+    const team = await portal.portalTeam(actorA());
+    assert.deepEqual(team.map((m) => m.name), ["A user"]);
+    assert.ok(!JSON.stringify(team).includes("@"), "team view exposes no email addresses or hashes");
+    const billing = await portal.portalBilling(actorA());
+    assert.deepEqual(billing.invoices.map((i) => i.number), [`A-INV-${tag}`]);
+    const json = JSON.stringify(billing);
+    assert.ok(!json.includes("SECRET"), "admin billing notes are never exposed");
+    assert.ok(!json.includes("prov_secret"), "provider references are never exposed");
+    await assert.rejects(portal.portalBilling({ id: "s", role: "ADMIN", operatorId: null }));
+    await assert.rejects(portal.portalTeam({ id: "u", role: "OPERATOR", operatorId: null }));
+  } finally {
+    await prisma.invoice.deleteMany({ where: { number: { in: [`A-INV-${tag}`, `B-INV-${tag}`] } } });
+  }
+});

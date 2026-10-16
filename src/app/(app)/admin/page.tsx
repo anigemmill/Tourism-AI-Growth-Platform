@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, PageHeader, Progress, Stat, Table } from "@/components/ui";
+import { ButtonLink, Card, PageHeader, Progress, Stat, Table } from "@/components/ui";
 import { fmtDateTime } from "@/components/admin/badges";
 import { can, requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -30,14 +30,35 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <PageHeader eyebrow="Administration" title="Super Admin" emphasis="overview" description="Accounts, businesses, billing, programme progress and security at a glance." />
+      <PageHeader
+        eyebrow={`${new Intl.DateTimeFormat("en-NZ", { weekday: "long", day: "numeric", month: "long", timeZone: "Pacific/Auckland" }).format(new Date())}`}
+        title="Business at a glance"
+        description="Accounts, clients, billing, programme progress and security."
+        actions={can(me, "users.manage") ? <ButtonLink href="/admin/users" variant="dark">+ Invite user</ButtonLink> : undefined}
+      />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Users" value={accounts.users.total} sub={`${accounts.users.active} active`} href="/admin/users" variant="night" />
-        <Stat label="Active businesses" value={accounts.businesses.active} sub={`${accounts.businesses.total} in total`} href="/admin/businesses?account=ACTIVE" variant="forest" />
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {billing ? (
+          <Stat label="Monthly recurring" value={formatMoney(billing.monthlyRecurringCents)} sub="Active NZD plans · manually recorded" href="/admin/billing" variant="highlight" />
+        ) : (
+          <Stat label="Users" value={accounts.users.total} sub={`${accounts.users.active} active`} href="/admin/users" variant="highlight" />
+        )}
+        <Stat label="Active clients" value={accounts.businesses.active} sub={`${accounts.businesses.total} in total`} href="/admin/businesses?account=ACTIVE" />
+        <Stat label="Users" value={accounts.users.active} sub={`${accounts.users.total} accounts in total`} href="/admin/users?status=ACTIVE" />
         <Stat label="Pending invitations" value={accounts.users.pending} href="/admin/users?status=PENDING" />
-        <Stat label="Failed sign-ins (24h)" value={signIns.failed24h} sub={signIns.lockedAccounts ? `${signIns.lockedAccounts} account(s) temporarily locked` : "No lockouts"} tone={signIns.lockedAccounts ? "danger" : "default"} />
+        <Stat label="Failed sign-ins (24h)" value={signIns.failed24h} sub={signIns.lockedAccounts ? `${signIns.lockedAccounts} account(s) temporarily locked` : "No lockouts"} variant={signIns.lockedAccounts ? "alert" : "plain"} />
       </div>
+
+      <NeedsYouToday
+        items={[
+          accounts.users.pending > 0 && { text: `${accounts.users.pending} invitation(s) not yet accepted`, href: "/admin/users?status=PENDING", cta: "Review" },
+          signIns.lockedAccounts > 0 && { text: `${signIns.lockedAccounts} account(s) locked after repeated failed sign-ins`, href: "/admin/users", cta: "Check" },
+          billing && billing.overdueInvoices > 0 && { text: `${billing.overdueInvoices} overdue invoice(s) — ${formatMoney(billing.outstandingCents)} outstanding`, href: "/admin/billing", cta: "Open" },
+          billing && billing.failedPayments90d > 0 && { text: `${billing.failedPayments90d} failed payment(s) in the last 90 days`, href: "/admin/billing?status=FAILED", cta: "Open" },
+          billing && billing.pastDueSubscriptions > 0 && { text: `${billing.pastDueSubscriptions} subscription(s) past due`, href: "/admin/billing", cta: "Open" },
+          accounts.businesses.suspended > 0 && { text: `${accounts.businesses.suspended} client(s) suspended`, href: "/admin/businesses?account=SUSPENDED", cta: "Open" },
+        ]}
+      />
 
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card title="Accounts">
@@ -104,5 +125,27 @@ export default async function AdminDashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+type Need = { text: string; href: string; cta: string };
+
+function NeedsYouToday({ items }: { items: (Need | false | null)[] }) {
+  const needs = items.filter((i): i is Need => Boolean(i));
+  return (
+    <Card className="mb-6" title="Needs you today" actions={<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${needs.length ? "bg-danger text-white" : "bg-surface-2 text-muted"}`}>{needs.length}</span>}>
+      {needs.length === 0 ? (
+        <p className="text-sm text-muted">Nothing needs your attention right now.</p>
+      ) : (
+        <ul className="space-y-2">
+          {needs.map((n) => (
+            <li key={n.text} className="flex items-center justify-between gap-3 rounded-xl bg-[color-mix(in_srgb,var(--violet)_12%,var(--surface))] px-4 py-2.5 text-sm">
+              <span className="text-ink">{n.text}</span>
+              <Link href={n.href} className="shrink-0 font-medium text-ink underline underline-offset-4">{n.cta}</Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }

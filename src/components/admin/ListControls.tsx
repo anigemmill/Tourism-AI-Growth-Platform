@@ -15,7 +15,7 @@ export function FilterBar({
   placeholder: string;
   filters: { name: string; label: string; value: string; options: { value: string; label: string }[] }[];
 }) {
-  const cls = "rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25";
+  const cls = "rounded-xl border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus:border-(--focus) focus:outline-none focus:ring-2 focus:ring-(--focus)/25";
   return (
     <form action={action} method="get" role="search" className="mb-4 flex flex-wrap items-end gap-2">
       <div className="min-w-[14rem] flex-1">

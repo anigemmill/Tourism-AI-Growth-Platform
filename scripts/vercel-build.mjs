@@ -1,16 +1,20 @@
 // Vercel build entrypoint (package.json "vercel-build").
+//
 // Production deployments apply pending migrations first; if a migration
 // fails, the build fails and the previous deployment stays live.
-// Preview deployments never migrate.
+//
+// Preview deployments never touch a database unless a separate STAGING
+// database is configured for Preview and STAGING_DATABASE=true is set
+// (see docs/STAGING.md). Even then the build refuses to run if the URLs
+// point at the production Supabase project.
 
 import { execSync, spawnSync } from "node:child_process";
-import { checkDatabaseUrl, normalizeDatabaseUrl, withConnectTimeout } from "./database-url.mjs";
+import { checkDatabaseUrl, normalizeDatabaseUrl, pointsAtProduction, withConnectTimeout } from "./database-url.mjs";
 
 const run = (cmd, env = process.env) => execSync(cmd, { stdio: "inherit", env });
 const env = process.env.VERCEL_ENV ?? "development";
 
-run("npx prisma generate");
-if (env === "production") {
+function validateUrls(target) {
   // Validate both URLs before Prisma sees them: a malformed one otherwise
   // fails migrate with an unexplained P1013.
   let failed = false;
@@ -25,31 +29,49 @@ if (env === "production") {
     failed ||= errors.length > 0;
   }
   if (failed) {
-    console.error("Fix the value(s) in Vercel → Settings → Environment Variables (Production), then redeploy. See docs/DEPLOYMENT.md.");
+    console.error(`Fix the value(s) in Vercel → Settings → Environment Variables (${target}), then redeploy. See docs/DEPLOYMENT.md.`);
     process.exit(1);
   }
-  console.log("Applying database migrations (production)…");
+}
+
+function migrate() {
   // Longer connect timeout for the first connection to an idle database, and
   // one retry: `migrate deploy` is idempotent and takes an advisory lock.
   const migrateEnv = { ...process.env, DIRECT_URL: withConnectTimeout(process.env.DIRECT_URL, 30) };
-  const migrate = () => {
+  const attempt = () => {
     const r = spawnSync("npx", ["prisma", "migrate", "deploy"], { env: migrateEnv, encoding: "utf8" });
     process.stdout.write(r.stdout ?? "");
     process.stderr.write(r.stderr ?? "");
     return { ok: r.status === 0, authFailed: /\bP1000\b/.test(`${r.stdout}${r.stderr}`) };
   };
-  let result = migrate();
+  let result = attempt();
   // Never retry a rejected password: it cannot succeed, and repeated failed
   // logins can get the build's IP temporarily banned by Supabase.
   if (!result.ok && !result.authFailed) {
     console.warn("Migration attempt failed; retrying once in 15 s…");
     execSync("sleep 15");
-    result = migrate();
+    result = attempt();
   }
   if (!result.ok) {
     if (result.authFailed) console.error("The database rejected the password in DIRECT_URL. Not retrying.");
     process.exit(1);
   }
+}
+
+run("npx prisma generate");
+if (env === "production") {
+  validateUrls("Production");
+  console.log("Applying database migrations (production)…");
+  migrate();
+} else if (env === "preview" && process.env.STAGING_DATABASE === "true") {
+  if (pointsAtProduction([process.env.DATABASE_URL, process.env.DIRECT_URL])) {
+    console.error("Refusing to migrate: the Preview database URLs point at the PRODUCTION project. Use a separate staging project.");
+    process.exit(1);
+  }
+  validateUrls("Preview");
+  console.log("Applying database migrations (staging, preview)…");
+  migrate();
+  if (process.env.STAGING_SEED_DEMO === "true") run("npx tsx scripts/staging-seed.ts");
 } else {
   console.log(`Skipping migrations for VERCEL_ENV=${env}.`);
 }

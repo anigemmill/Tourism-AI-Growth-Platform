@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { authInputClass, authLabelClass } from "./AuthShell";
+import { useState, type ReactNode } from "react";
+import { authInputClass, authLabelClass } from "./styles";
 
 type FieldProps = {
   id: string;
@@ -47,11 +47,14 @@ export function AuthField({ type = "text", ...p }: FieldProps & { type?: "text" 
   );
 }
 
-export function PasswordField({ minLength, ...p }: FieldProps & { minLength?: number }) {
+export function PasswordField({ minLength, labelAction, ...p }: FieldProps & { minLength?: number; labelAction?: ReactNode }) {
   const [visible, setVisible] = useState(false);
   return (
     <div>
-      <label htmlFor={p.id} className={authLabelClass}>{p.label}</label>
+      <div className="flex items-baseline justify-between gap-2">
+        <label htmlFor={p.id} className={authLabelClass}>{p.label}</label>
+        {labelAction && <span className="text-[13px]">{labelAction}</span>}
+      </div>
       <div className="relative">
         <input
           id={p.id}
