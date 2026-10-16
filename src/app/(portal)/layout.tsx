@@ -28,10 +28,10 @@ export default async function PortalLayout({ children }: { children: React.React
       nav={[
         {
           items: [
-            { href: "/portal", label: "Overview" },
-            ...(dashboard ? [{ href: "/portal/plan", label: "Action plan" }, { href: "/portal/reports", label: "Reports" }] : []),
-            ...(features.includes("portal.collective") ? [{ href: "/portal/collective", label: "Growth Collective" }] : []),
-            { href: "/portal/account", label: "Account & team" },
+            { href: "/portal", label: "Overview", icon: "overview" },
+            ...(dashboard ? [{ href: "/portal/plan", label: "Action plan", icon: "plan" as const }, { href: "/portal/reports", label: "Reports", icon: "reports" as const }] : []),
+            ...(features.includes("portal.collective") ? [{ href: "/portal/collective", label: "Growth Collective", icon: "collective" as const }] : []),
+            { href: "/portal/account", label: "Account & team", icon: "account" },
           ],
         },
       ]}

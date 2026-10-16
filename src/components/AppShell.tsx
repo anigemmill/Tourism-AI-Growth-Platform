@@ -8,10 +8,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { cx } from "@/components/ui/primitives";
+import { NavIcon, type NavIconName } from "@/components/NavIcon";
 
 export interface NavGroup {
   label?: string;
-  items: { href: string; label: string; badge?: string }[];
+  items: { href: string; label: string; badge?: string; icon?: NavIconName }[];
 }
 
 function initials(name: string) {
@@ -92,7 +93,10 @@ export function AppShell({
                         active ? "bg-sidebar-active font-semibold text-sidebar-active-ink" : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
                       )}
                     >
-                      <span>{item.label}</span>
+                      <span className="flex items-center gap-2.5">
+                        {item.icon && <NavIcon name={item.icon} />}
+                        {item.label}
+                      </span>
                       {item.badge && (
                         <span className={cx("rounded-full px-1.5 font-mono text-[9px] uppercase tracking-wide", active ? "bg-night text-night-ink" : "bg-lime/60 text-lime-ink")}>
                           {item.badge}
