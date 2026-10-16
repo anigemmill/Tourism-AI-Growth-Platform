@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ActionForm, ButtonLink, Card, ConfidenceBadge, DecisionBadge, DefinitionList, EvidenceBadge, ExperimentStatusBadge, HorizonBadge,
-  OppStatusBadge, PageHeader, Select, TextArea, VisibilityBadge, WorkStatusBadge,
+  OppStatusBadge, PageHeader, Select, TextArea, WorkStatusBadge,
 } from "@/components/ui";
 import { EvidencePanel } from "@/components/EvidencePanel";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requirePermission } from "@/lib/auth/session";
+import { can, requirePermission } from "@/lib/auth/session";
+import { ClientVisibilityToggle } from "@/components/ClientVisibilityToggle";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions, staffOptions } from "@/lib/queries";
 import { priorityBand, priorityScore } from "@/lib/domain/prioritise";
@@ -16,7 +17,7 @@ import { convertToProject, recordDecision, updateOpportunity } from "../actions"
 import { OpportunityForm } from "../OpportunityForm";
 
 export default async function OpportunityPage({ params }: PageProps<"/opportunities/[id]">) {
-  await requirePermission("opportunities.view");
+  const user = await requirePermission("opportunities.view");
   const { id } = await params;
   const o = await prisma.opportunity.findUnique({
     where: { id },
@@ -44,7 +45,7 @@ export default async function OpportunityPage({ params }: PageProps<"/opportunit
         title={o.title}
         description={
           <span className="flex flex-wrap gap-1.5">
-            <HorizonBadge h={o.horizon} /><OppStatusBadge s={o.status} /><EvidenceBadge k={o.evidenceBasis} /><ConfidenceBadge c={o.confidence} /><VisibilityBadge v={o.visibility} /><DecisionBadge d={o.decision} />
+            <HorizonBadge h={o.horizon} /><OppStatusBadge s={o.status} /><EvidenceBadge k={o.evidenceBasis} /><ConfidenceBadge c={o.confidence} /><ClientVisibilityToggle kind="opportunity" id={o.id} visibility={o.visibility} operatorId={o.operatorId} editable={can(user, "opportunities.edit")} /><DecisionBadge d={o.decision} />
           </span>
         }
         actions={

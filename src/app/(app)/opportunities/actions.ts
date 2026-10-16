@@ -173,6 +173,8 @@ export async function applyTemplate(templateId: string, _: ActionState, fd: Form
         problem: "To confirm with operator (created from template).", proposedSolution: t.description,
         effortHours: t.typicalEffortHours, oneOffCostNzd: t.typicalOneOffNzd, monthlyCostNzd: t.typicalMonthlyNzd,
         tools: t.tools, successMetric: t.successMetric, evidenceBasis: "HYPOTHESIS" as const, status: "IDENTIFIED" as const, ownerId: user.id,
+        // Drafts until staff confirm them with the business and show them.
+        visibility: "INTERNAL" as const,
       })),
     });
     await audit(user.id, "create", "opportunity", null, `Applied template "${t.name}" to ${targets.length} operator(s)`);

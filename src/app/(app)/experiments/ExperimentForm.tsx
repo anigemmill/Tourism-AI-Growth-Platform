@@ -77,7 +77,7 @@ export function ExperimentForm({
         <FormGrid cols={3}>
           <Select name="status" label="Status" options={options(EXPERIMENT_STATUS_LABELS)} defaultValue={e?.status ?? "DESIGN"} />
           <Select name="decision" label="Decision" options={options(DECISION_LABELS)} defaultValue={e?.decision} placeholder="—" />
-          <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={e?.visibility ?? "CONFIDENTIAL"} />
+          <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={e?.visibility ?? "INTERNAL"} />
         </FormGrid>
         <div className="mt-4"><TextArea name="nextAction" label="Next action" defaultValue={e?.nextAction} rows={2} /></div>
       </FormSection>

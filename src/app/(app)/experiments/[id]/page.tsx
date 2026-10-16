@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, ButtonLink, Card, DecisionBadge, ExperimentStatusBadge, IllustrativeBadge, Notice, PageHeader, Stat, Table, VisibilityBadge } from "@/components/ui";
+import { Badge, ButtonLink, Card, DecisionBadge, ExperimentStatusBadge, IllustrativeBadge, Notice, PageHeader, Stat, Table } from "@/components/ui";
 import { EvidencePanel } from "@/components/EvidencePanel";
-import { requirePermission } from "@/lib/auth/session";
+import { can, requirePermission } from "@/lib/auth/session";
+import { ClientVisibilityToggle } from "@/components/ClientVisibilityToggle";
 import { prisma } from "@/lib/prisma";
 import { initiativeOptions, operatorOptions } from "@/lib/queries";
 import { opportunityOptions } from "@/lib/opportunityOptions";
@@ -14,7 +15,7 @@ import { updateExperiment } from "../actions";
 import { ExperimentForm } from "../ExperimentForm";
 
 export default async function ExperimentPage({ params }: PageProps<"/experiments/[id]">) {
-  await requirePermission("experiments.view");
+  const user = await requirePermission("experiments.view");
   const { id } = await params;
   const e = await prisma.experiment.findUnique({
     where: { id },
@@ -33,7 +34,7 @@ export default async function ExperimentPage({ params }: PageProps<"/experiments
       <PageHeader
         eyebrow={e.operator ? <Link href={`/operators/${e.operator.id}`} className="hover:underline">{e.operator.name}</Link> : e.initiative ? <Link href={`/collective/initiatives/${e.initiative.id}`} className="hover:underline">{e.initiative.title}</Link> : "Experiment"}
         title={e.title}
-        description={<span className="flex flex-wrap gap-1.5"><ExperimentStatusBadge s={e.status} /><DecisionBadge d={e.decision} /><VisibilityBadge v={e.visibility} />{illustrative && <IllustrativeBadge />}</span>}
+        description={<span className="flex flex-wrap gap-1.5"><ExperimentStatusBadge s={e.status} /><DecisionBadge d={e.decision} /><ClientVisibilityToggle kind="experiment" id={e.id} visibility={e.visibility} operatorId={e.operatorId} editable={can(user, "experiments.edit")} />{illustrative && <IllustrativeBadge />}</span>}
         actions={<ButtonLink href={`/reports/experiment/${e.id}`}>Experiment report</ButtonLink>}
       />
       <Card className="mb-6" title="Hypothesis">

@@ -7,7 +7,8 @@ import {
 } from "@/components/ui";
 import { TaskList } from "@/components/TaskList";
 import { TaskQuickAdd } from "@/components/TaskQuickAdd";
-import { requirePermission } from "@/lib/auth/session";
+import { ClientVisibilityToggle } from "@/components/ClientVisibilityToggle";
+import { can, requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { staffOptions } from "@/lib/queries";
 import { priorityScore, roadmapOrder } from "@/lib/domain/prioritise";
@@ -17,7 +18,7 @@ import { formatDate, formatNum, pct, toDateInput } from "@/lib/format";
 import { startAssessment, updateGovernance } from "../actions";
 
 export default async function OperatorPage({ params }: PageProps<"/operators/[id]">) {
-  await requirePermission("operators.view");
+  const user = await requirePermission("operators.view");
   const { id } = await params;
   const op = await prisma.operator.findUnique({
     where: { id },
@@ -95,7 +96,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
               <div className="p-5"><EmptyState title="No opportunities recorded">Complete an assessment, then record opportunities from it.</EmptyState></div>
             ) : (
               <Table>
-                <thead><tr><th>Opportunity</th><th>Type</th><th>Horizon</th><th className="text-right">Score</th><th>Status</th></tr></thead>
+                <thead><tr><th>Opportunity</th><th>Type</th><th>Horizon</th><th className="text-right">Score</th><th>Status</th><th>Client</th></tr></thead>
                 <tbody>
                   {roadmap.map((o) => (
                     <tr key={o.id}>
@@ -104,6 +105,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
                       <td><HorizonBadge h={o.horizon} /></td>
                       <td className="text-right tabular-nums">{priorityScore(o)}</td>
                       <td><OppStatusBadge s={o.status} /></td>
+                      <td><ClientVisibilityToggle kind="opportunity" id={o.id} visibility={o.visibility} operatorId={o.operatorId} editable={can(user, "opportunities.edit")} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -112,7 +114,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
           </Card>
 
           <Card title="Tasks" description={`${openTasks.length} open`}>
-            <TaskList tasks={op.tasks} showOperator={false} />
+            <TaskList tasks={op.tasks} showOperator={false} clientVisibility={can(user, "work.edit") ? "edit" : "show"} />
             <details className="mt-4">
               <summary className="cursor-pointer text-sm font-medium text-accent">Add a task for {op.name}</summary>
               <div className="mt-4"><TaskQuickAdd operatorId={op.id} staffOpts={staffOpts} /></div>
@@ -124,7 +126,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
               <div className="p-5"><EmptyState title="No projects yet">Convert an approved opportunity into a project.</EmptyState></div>
             ) : (
               <Table>
-                <thead><tr><th>Project</th><th>Status</th><th>Due</th><th>Approved</th><th>Adoption</th></tr></thead>
+                <thead><tr><th>Project</th><th>Status</th><th>Due</th><th>Approved</th><th>Adoption</th><th>Client</th></tr></thead>
                 <tbody>
                   {op.projects.map((p) => (
                     <tr key={p.id}>
@@ -133,6 +135,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
                       <td className="text-muted">{formatDate(p.dueDate)}</td>
                       <td className="text-muted">{p.approvedBy ? `${p.approvedBy}, ${formatDate(p.approvedAt)}` : "—"}</td>
                       <td className="text-muted">{p.adoption ?? "—"}</td>
+                      <td><ClientVisibilityToggle kind="project" id={p.id} visibility={p.visibility} operatorId={p.operatorId} editable={can(user, "work.edit")} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -173,6 +176,7 @@ export default async function OperatorPage({ params }: PageProps<"/operators/[id
                     <tr key={e.id}>
                       <td><Link href={`/experiments/${e.id}`} className="font-medium hover:underline">{e.title}</Link><p className="text-xs text-muted">{e.hypothesis}</p></td>
                       <td><ExperimentStatusBadge s={e.status} /></td>
+                      <td><ClientVisibilityToggle kind="experiment" id={e.id} visibility={e.visibility} operatorId={e.operatorId} editable={can(user, "experiments.edit")} /></td>
                     </tr>
                   ))}
                 </tbody>

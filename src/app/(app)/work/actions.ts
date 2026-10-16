@@ -23,7 +23,7 @@ const taskSchema = z.object({
   ownerLabel: f.optStr(),
   dueDate: f.optDate(),
   priority: z.enum(["NOW", "NEXT", "LATER", "IGNORE"]).default("NOW"),
-  visibility: VIS.default("CONFIDENTIAL"),
+  visibility: VIS.default("INTERNAL"),
 });
 
 export async function createTask(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -72,7 +72,7 @@ const projectSchema = z.object({
   approvedBy: f.optStr(),
   approvedAt: f.optDate(),
   adoption: f.optStr(),
-  visibility: VIS.default("CONFIDENTIAL"),
+  visibility: VIS.default("INTERNAL"),
 });
 
 export async function createProject(_: ActionState, fd: FormData): Promise<ActionState> {

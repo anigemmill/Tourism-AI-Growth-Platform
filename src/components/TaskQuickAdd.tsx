@@ -30,7 +30,7 @@ export function TaskQuickAdd({
         <TextField name="ownerLabel" label="Or owner (non-user)" placeholder="e.g. Operator: Jo" />
         <TextField name="dueDate" label="Due" type="date" />
         <Select name="priority" label="Priority" options={options(HORIZON_LABELS)} defaultValue="NOW" />
-        <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={operatorId || initiativeId ? "CONFIDENTIAL" : "INTERNAL"} />
+        <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={initiativeId ? "CONFIDENTIAL" : "INTERNAL"} />
       </FormGrid>
     </ActionForm>
   );

@@ -93,8 +93,8 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
 export const LOWER_IS_BETTER: MetricKey[] = ["COST_PER_BOOKING"];
 
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
-  INTERNAL: "Internal (staff only)",
-  CONFIDENTIAL: "Confidential (operator + staff)",
+  INTERNAL: "Staff only (not shown to the business)",
+  CONFIDENTIAL: "This business + staff",
   COHORT: "Shared with cohort",
   AGGREGATE_APPROVED: "Approved for anonymised aggregate",
   PUBLIC_APPROVED: "Approved for public case study",

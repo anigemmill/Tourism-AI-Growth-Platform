@@ -4,6 +4,7 @@ import { ActionForm, Badge, EmptyState, Table, WorkStatusBadge } from "@/compone
 import { setTaskStatus } from "@/app/(app)/work/actions";
 import { WORK_STATUS_LABELS } from "@/lib/labels";
 import { formatShortDate } from "@/lib/format";
+import { ClientVisibilityToggle } from "@/components/ClientVisibilityToggle";
 
 type Row = Task & {
   operator?: { id: string; name: string } | null;
@@ -15,7 +16,11 @@ export function isOverdue(t: { dueDate: Date | null; status: WorkStatus }, now =
   return !!t.dueDate && t.dueDate < now && t.status !== "DONE" && t.status !== "CANCELLED";
 }
 
-export function TaskList({ tasks, showOperator = true, editable = true }: { tasks: Row[]; showOperator?: boolean; editable?: boolean }) {
+/**
+ * `clientVisibility`: show whether each task is visible to its business
+ * ("show"), with a control to change it ("edit"). Off by default.
+ */
+export function TaskList({ tasks, showOperator = true, editable = true, clientVisibility }: { tasks: Row[]; showOperator?: boolean; editable?: boolean; clientVisibility?: "show" | "edit" }) {
   if (tasks.length === 0) return <EmptyState title="No tasks here" />;
   return (
     <Table>
@@ -26,6 +31,7 @@ export function TaskList({ tasks, showOperator = true, editable = true }: { task
           <th>Owner</th>
           <th>Due</th>
           <th>Status</th>
+          {clientVisibility && <th>Client</th>}
         </tr>
       </thead>
       <tbody>
@@ -62,6 +68,9 @@ export function TaskList({ tasks, showOperator = true, editable = true }: { task
                 <WorkStatusBadge s={t.status} />
               )}
             </td>
+            {clientVisibility && (
+              <td><ClientVisibilityToggle kind="task" id={t.id} visibility={t.visibility} operatorId={t.operatorId} editable={clientVisibility === "edit"} /></td>
+            )}
           </tr>
         ))}
       </tbody>

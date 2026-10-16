@@ -28,7 +28,7 @@ export function ProjectForm({
         <TextField name="startDate" label="Start" type="date" defaultValue={toDateInput(p?.startDate)} />
         <TextField name="dueDate" label="Due" type="date" defaultValue={toDateInput(p?.dueDate)} />
         <TextField name="tools" label="Tools" defaultValue={p?.tools.join(", ")} />
-        <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={p?.visibility ?? "CONFIDENTIAL"} />
+        <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={p?.visibility ?? "INTERNAL"} hint="New projects stay staff only until you show them to the business." />
         <TextField name="oneOffCostNzd" label="One-off cost (NZD)" type="number" defaultValue={p?.oneOffCostNzd} />
         <TextField name="monthlyCostNzd" label="Monthly cost (NZD)" type="number" defaultValue={p?.monthlyCostNzd} />
       </FormGrid>

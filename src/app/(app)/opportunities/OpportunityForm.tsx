@@ -72,7 +72,7 @@ export function OpportunityForm({
           <Select name="evidenceBasis" label="Basis of recommendation" options={options(EVIDENCE_LABELS)} defaultValue={o?.evidenceBasis ?? "HYPOTHESIS"} />
           <Select name="horizon" label="Horizon" options={options(HORIZON_LABELS)} defaultValue={o?.horizon ?? "NEXT"} />
           <Select name="status" label="Status" options={options(OPP_STATUS_LABELS)} defaultValue={o?.status ?? "IDENTIFIED"} />
-          <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={o?.visibility ?? "CONFIDENTIAL"} hint="Sharing beyond the operator requires their recorded consent." />
+          <Select name="visibility" label="Visible to" options={options(VISIBILITY_LABELS)} defaultValue={o?.visibility ?? "INTERNAL"} hint="New items stay staff only until you show them to the business. Sharing beyond the business needs its recorded consent." />
         </FormGrid>
       </FormSection>
     </ActionForm>
