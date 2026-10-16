@@ -10,6 +10,13 @@ Mockups* wireframes. Branch: `claude/findable-phase-1` (from production
 - The Rotorua pilot keeps working: brand is a deployment setting
   (`PRODUCT_BRAND`), defaulting to **Outside In** so production looks and
   reads as it does today until a brand switch is approved.
+- The new layouts are behind a flag, `NEW_LAYOUT`. Unset, it follows the
+  brand: **on for Findable, off for the pilot**. With it off, the pilot sees
+  exactly the pre-Phase-1 screens (navigation, portal home, "My account",
+  admin overview, sign-in link placement), and `/portal/plan` and
+  `/portal/reports` return 404. `NEW_LAYOUT=true` / `false` overrides it.
+  Verified: with the flag off, all 13 pilot screens checked are pixel-identical
+  to production `main`.
 - No database changes in Phase 1 (no migrations).
 - Not in Phase 1: public marketing site, free check, self-service sign-up,
   Google sign-in, "keep me signed in", Stripe, the AI testing engine, AI
@@ -71,6 +78,17 @@ None. New portal views read existing tables through the session-scoped
 portal data layer (`src/lib/dal/portal.ts`): the business id always comes
 from the signed-in user's validated membership, never from the request.
 
+## Rolling it out without disturbing the pilot
+
+1. Merge with Production variables unchanged (`PRODUCT_BRAND` and
+   `NEW_LAYOUT` unset): the pilot sees no change. Only the safety guards and
+   shared tokens ship.
+2. Findable runs on its own deployment (or Preview / a custom environment)
+   with `PRODUCT_BRAND=findable`; the new layouts switch on with it.
+3. Only if you later want the pilot on the new layouts: set
+   `NEW_LAYOUT=true` for Production after telling pilot users, and set it
+   back to unset or `false` to roll back instantly (redeploy, no data change).
+
 ## Acceptance checklist
 
 Security & behaviour (must not regress)
@@ -86,9 +104,14 @@ Security & behaviour (must not regress)
       (existing integration and end-to-end suites pass).
 - [ ] No public registration, Google sign-in, Stripe or AI-testing code.
 
-Brand
+Brand & pilot protection
 - [ ] With `PRODUCT_BRAND` unset, the app still shows "Outside In" /
       "Tourism AI Growth OS".
+- [ ] With `PRODUCT_BRAND` and `NEW_LAYOUT` unset, pilot screens match
+      production `main` (staff nav with "Dashboard" first and
+      "Administration" last; portal "My business" / "My account"; admin
+      "Super Admin overview"; "Forgotten your password?" under the form);
+      `/portal/plan` and `/portal/reports` are 404.
 - [ ] With `PRODUCT_BRAND=findable`, wordmark, titles, fonts and colours
       follow the wireframes; no "Outside In" text remains in shared chrome.
 
@@ -102,6 +125,12 @@ Design
 - [ ] Sign-in matches the wireframe split layout (Findable brand).
 - [ ] Layout works at 390 px (mobile) and 1440 px; keyboard focus visible;
       text contrast ≥ 4.5:1.
+
+Staging
+- [ ] Preview builds and the app refuse any database URL naming the
+      production project (`hescoabpcjukmgeopjnq`), staging or not.
+- [ ] Staging seed only runs on an empty staging database with
+      `STAGING_DATABASE=true`, and only creates synthetic, labelled data.
 
 Delivery
 - [ ] Lint, type check, unit, integration and end-to-end tests pass.

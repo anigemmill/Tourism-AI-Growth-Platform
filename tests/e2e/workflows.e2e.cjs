@@ -1,6 +1,9 @@
 // End-to-end check of critical workflows and safety gates against a running
 // app seeded with SEED_DEMO=true and the demo passwords from docs/GROWTH_OS.md.
 // Usage: E2E_BASE_URL=http://localhost:3000 node tests/e2e/workflows.e2e.cjs
+// E2E_LAYOUT=new when the app runs with the Phase 1 layouts (NEW_LAYOUT on /
+// PRODUCT_BRAND=findable); default "legacy" is the pilot experience.
+const NEW_LAYOUT = process.env.E2E_LAYOUT === "new";
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const B = process.env.E2E_BASE_URL || "http://localhost:3000";
 const T = 90000;
@@ -124,7 +127,7 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
 
   // Super admin console: dashboard, invite with a one-time link (no email configured locally)
   await f.goto(B + "/admin");
-  await check("super admin dashboard shows account totals", await seen(f.getByText("Business at a glance")));
+  await check("super admin dashboard shows account totals", await seen(f.getByText(NEW_LAYOUT ? "Business at a glance" : "Active businesses")));
   await f.goto(B + "/admin/users");
   const inviteEmail = `e2e-invite-${stamp}@demo.example`;
   await f.fill("#f-name", "E2E Invitee"); await f.fill("#f-email", inviteEmail); await f.selectOption("#f-role", "OPERATOR");
@@ -167,6 +170,17 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   await o.goto(B + "/portal");
   await o.fill("#f-title", "Lots of rain cancellations"); await o.fill("#f-summary", "Three cancellations"); await o.click("button:has-text('Send update')");
   await check("operator can submit an update", await seen(status(o).filter({ hasText: /Thanks/ })));
+  // Layout flag: the pilot keeps its pre-Phase-1 portal; Phase 1 pages exist only when enabled.
+  const main = o.getByRole("navigation", { name: "Main" });
+  if (NEW_LAYOUT) {
+    await check("new layout: portal nav shows Action plan and Account & team", await seen(main.getByRole("link", { name: "Action plan" })) && await seen(main.getByRole("link", { name: "Account & team" })));
+    const plan = await o.goto(B + "/portal/plan"); await check("new layout: action plan page opens", plan.status() === 200);
+  } else {
+    await check("pilot layout: portal nav unchanged (My business, My account)", await seen(main.getByRole("link", { name: "My business" })) && await seen(main.getByRole("link", { name: "My account" })));
+    await check("pilot layout: no Action plan link", (await main.getByRole("link", { name: "Action plan" }).count()) === 0);
+    const plan = await o.goto(B + "/portal/plan"); await check("pilot layout: Phase 1 pages are not reachable", plan.status() === 404);
+    await o.goto(B + "/portal");
+  }
   // Logout revokes session
   await o.click("button:has-text('Sign out')"); await o.waitForURL(/login/);
   await o.goto(B + "/portal"); await check("signed-out user redirected to login", /login/.test(o.url()));

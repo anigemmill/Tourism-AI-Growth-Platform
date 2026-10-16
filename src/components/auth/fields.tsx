@@ -51,10 +51,14 @@ export function PasswordField({ minLength, labelAction, ...p }: FieldProps & { m
   const [visible, setVisible] = useState(false);
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-2">
+      {labelAction ? (
+        <div className="flex items-baseline justify-between gap-2">
+          <label htmlFor={p.id} className={authLabelClass}>{p.label}</label>
+          <span className="text-[13px]">{labelAction}</span>
+        </div>
+      ) : (
         <label htmlFor={p.id} className={authLabelClass}>{p.label}</label>
-        {labelAction && <span className="text-[13px]">{labelAction}</span>}
-      </div>
+      )}
       <div className="relative">
         <input
           id={p.id}

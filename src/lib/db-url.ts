@@ -34,3 +34,20 @@ export function normalizeDatabaseUrl(value: string | undefined): string | undefi
   }
   return v;
 }
+
+// The production Supabase project. Must match PRODUCTION_DB_REF in
+// scripts/database-url.mjs (a unit test checks they agree).
+export const PRODUCTION_DB_REF = "hescoabpcjukmgeopjnq";
+
+/**
+ * Runtime guard for staging: outside a Production deployment (Vercel Preview
+ * or Development), refuse to connect to the production project at all, so a
+ * preview can never read or change production data, whatever its variables
+ * say. Returns an error message, or null when the connection is allowed.
+ * Local runs (no VERCEL_ENV) are not affected.
+ */
+export function productionDatabaseProblem(vercelEnv: string | undefined, urls: (string | undefined)[]): string | null {
+  if (!vercelEnv || vercelEnv === "production") return null;
+  if (!urls.some((u) => u?.toLowerCase().includes(PRODUCTION_DB_REF))) return null;
+  return `Refusing to connect: this ${vercelEnv} deployment's database URL points at the PRODUCTION project. Use the separate staging database (docs/STAGING.md).`;
+}

@@ -3,21 +3,37 @@
 
 import type { NavGroup } from "@/components/AppShell";
 import type { Permission } from "@/lib/rbac/permissions";
+import { newLayoutEnabled } from "@/lib/brand";
 
 type Item = { href: string; label: string; badge?: string; permission: Permission };
 
-const GROUPS: { label?: string; items: Item[] }[] = [
-  {
-    label: "Back office",
-    items: [
-      { href: "/admin", label: "Overview", permission: "admin.dashboard" },
-      { href: "/admin/businesses", label: "Clients", permission: "businesses.view" },
-      { href: "/admin/billing", label: "Billing", permission: "billing.view" },
-      { href: "/admin/users", label: "Users & access", permission: "users.view" },
-      { href: "/admin/access", label: "Roles & permissions", permission: "users.roles" },
-    ],
-  },
-  { label: "Rotorua pilot", items: [{ href: "/", label: "Programme dashboard", permission: "dashboard.programme" }] },
+type Group = { label?: string; items: Item[] };
+
+// Phase 1 (Findable) back office first; the pilot's tools follow.
+const BACK_OFFICE: Group = {
+  label: "Back office",
+  items: [
+    { href: "/admin", label: "Overview", permission: "admin.dashboard" },
+    { href: "/admin/businesses", label: "Clients", permission: "businesses.view" },
+    { href: "/admin/billing", label: "Billing", permission: "billing.view" },
+    { href: "/admin/users", label: "Users & access", permission: "users.view" },
+    { href: "/admin/access", label: "Roles & permissions", permission: "users.roles" },
+  ],
+};
+
+// The pre-Phase-1 navigation, unchanged for the Rotorua pilot (NEW_LAYOUT off).
+const LEGACY_ADMINISTRATION: Group = {
+  label: "Administration",
+  items: [
+    { href: "/admin", label: "Admin overview", permission: "admin.dashboard" },
+    { href: "/admin/users", label: "Users", permission: "users.view" },
+    { href: "/admin/businesses", label: "Businesses", permission: "businesses.view" },
+    { href: "/admin/billing", label: "Billing", permission: "billing.view" },
+    { href: "/admin/access", label: "Roles & permissions", permission: "users.roles" },
+  ],
+};
+
+const PILOT_GROUPS: Group[] = [
   {
     label: "Operators",
     items: [
@@ -55,8 +71,11 @@ const GROUPS: { label?: string; items: Item[] }[] = [
   },
 ];
 
-export function staffNav(permissions: readonly string[]): NavGroup[] {
-  const groups = GROUPS.map((g) => ({
+const NEW_GROUPS: Group[] = [BACK_OFFICE, { label: "Rotorua pilot", items: [{ href: "/", label: "Programme dashboard", permission: "dashboard.programme" }] }, ...PILOT_GROUPS];
+const LEGACY_GROUPS: Group[] = [{ items: [{ href: "/", label: "Dashboard", permission: "dashboard.programme" }] }, ...PILOT_GROUPS, LEGACY_ADMINISTRATION];
+
+export function staffNav(permissions: readonly string[], newLayout = newLayoutEnabled()): NavGroup[] {
+  const groups = (newLayout ? NEW_GROUPS : LEGACY_GROUPS).map((g) => ({
     label: g.label,
     items: g.items.filter((i) => permissions.includes(i.permission)).map(({ href, label, badge }) => ({ href, label, badge })),
   })).filter((g) => g.items.length > 0);

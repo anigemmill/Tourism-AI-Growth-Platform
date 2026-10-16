@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Card, EmptyState, PageHeader, Progress, Table, WorkStatusBadge, cx } from "@/components/ui";
 import { MoveCard, isDone } from "@/components/portal/MoveCard";
+import { notFound } from "next/navigation";
 import { requireOperatorFeature } from "@/lib/auth/portal";
+import { newLayoutEnabled } from "@/lib/brand";
 import { portalOpportunities, portalTasks } from "@/lib/dal/portal";
 import { roadmapOrder } from "@/lib/domain/prioritise";
 import { formatShortDate } from "@/lib/format";
@@ -17,6 +19,8 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 
 export default async function PlanPage({ searchParams }: PageProps<"/portal/plan">) {
   const { user } = await requireOperatorFeature("portal.dashboard");
+  // Phase 1 page: not part of the pilot experience while NEW_LAYOUT is off.
+  if (!newLayoutEnabled()) notFound();
   const actor = { id: user.id, role: user.role, operatorId: user.operatorId };
   const sp = await searchParams;
   const filter: FilterKey = FILTERS.some((f) => f.key === sp.show) ? (sp.show as FilterKey) : "all";

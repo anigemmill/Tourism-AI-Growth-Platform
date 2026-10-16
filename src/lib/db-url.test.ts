@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeDatabaseUrl, withConnectTimeout } from "./db-url";
+import { normalizeDatabaseUrl, PRODUCTION_DB_REF, productionDatabaseProblem, withConnectTimeout } from "./db-url";
+import { PRODUCTION_DB_REF as SCRIPT_PRODUCTION_DB_REF } from "../../scripts/database-url.mjs";
 
 const pooled = "postgresql://postgres.ref:p%23ss@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
 
@@ -31,4 +32,18 @@ test("normalizeDatabaseUrl mirrors the build-time repairs", () => {
   );
   assert.equal(normalizeDatabaseUrl(pooled), pooled);
   assert.equal(normalizeDatabaseUrl(undefined), undefined);
+});
+
+test("previews and development deployments refuse the production database", () => {
+  assert.equal(PRODUCTION_DB_REF, SCRIPT_PRODUCTION_DB_REF);
+  const prod = `postgresql://postgres.${PRODUCTION_DB_REF}:pw@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  const prodDirect = `postgresql://postgres:pw@db.${PRODUCTION_DB_REF.toUpperCase()}.supabase.co:5432/postgres`;
+  const staging = "postgresql://postgres.stagingref:pw@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres";
+  assert.match(productionDatabaseProblem("preview", [prod, staging]) ?? "", /PRODUCTION/);
+  assert.match(productionDatabaseProblem("preview", [staging, prodDirect]) ?? "", /PRODUCTION/);
+  assert.match(productionDatabaseProblem("development", [prod, undefined]) ?? "", /PRODUCTION/);
+  assert.equal(productionDatabaseProblem("preview", [staging, staging]), null);
+  assert.equal(productionDatabaseProblem("preview", [undefined, undefined]), null);
+  assert.equal(productionDatabaseProblem("production", [prod, prod]), null);
+  assert.equal(productionDatabaseProblem(undefined, [prod, prod]), null);
 });

@@ -12,8 +12,11 @@ import { compareMeasurements } from "@/lib/domain/results";
 import { AREA_LABELS, METRIC_LABELS } from "@/lib/labels";
 import { formatDate, formatNum, formatShortDate } from "@/lib/format";
 import { submitSignal } from "./actions";
+import { newLayoutEnabled } from "@/lib/brand";
+import { LegacyPortalHome } from "./LegacyHome";
 
 export default async function PortalHome() {
+  if (!newLayoutEnabled()) return <LegacyPortalHome />;
   const { user, features } = await requireOperator();
   if (!features.includes("portal.dashboard")) {
     return (

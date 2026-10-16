@@ -5,6 +5,7 @@ import { requireOperator } from "@/lib/auth/portal";
 import { portalBilling, portalBusiness, portalTeam } from "@/lib/dal/portal";
 import { formatMoney, invoiceBalance } from "@/lib/billing/calc";
 import { INTERVAL_LABELS, ROLE_LABELS } from "@/lib/labels";
+import { newLayoutEnabled } from "@/lib/brand";
 
 const TABS = ["business", "team", "billing", "security"] as const;
 type Tab = (typeof TABS)[number];
@@ -12,6 +13,15 @@ const TAB_LABELS: Record<Tab, string> = { business: "Business", team: "Team", bi
 
 export default async function PortalAccountPage({ searchParams }: PageProps<"/portal/account">) {
   const { user } = await requireOperator();
+  if (!newLayoutEnabled()) {
+    // Rotorua pilot: the pre-Phase-1 "My account" page, unchanged.
+    return (
+      <div>
+        <PageHeader eyebrow="Account" title="My account" description="Your profile, password and signed-in devices." />
+        <AccountPanel user={user} />
+      </div>
+    );
+  }
   const actor = { id: user.id, role: user.role, operatorId: user.operatorId };
   const sp = await searchParams;
   const tab: Tab = TABS.includes(sp.tab as Tab) ? (sp.tab as Tab) : "business";

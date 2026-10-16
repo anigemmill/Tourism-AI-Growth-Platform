@@ -7,7 +7,8 @@ import { authButtonClass } from "@/components/auth/styles";
 import { AuthField, PasswordField } from "@/components/auth/fields";
 import { Spinner } from "@/components/auth/Spinner";
 
-export function LoginForm({ next }: { next?: string }) {
+/** `forgotInline`: Phase 1 puts "Forgot password?" beside the password label. */
+export function LoginForm({ next, forgotInline = false }: { next?: string; forgotInline?: boolean }) {
   const [state, action, pending] = useActionState(login, undefined);
   return (
     <form
@@ -32,7 +33,7 @@ export function LoginForm({ next }: { next?: string }) {
         label="Password"
         autoComplete="current-password"
         required
-        labelAction={<Link href="/forgot-password" className="text-accent underline decoration-line-strong underline-offset-4 hover:decoration-current">Forgot password?</Link>}
+        labelAction={forgotInline ? <Link href="/forgot-password" className="text-accent underline decoration-line-strong underline-offset-4 hover:decoration-current">Forgot password?</Link> : undefined}
       />
       {state?.error && (
         <p role="alert" className="rounded-xl border border-danger/25 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">{state.error}</p>

@@ -162,5 +162,5 @@ export const PRODUCTION_DB_REF = "hescoabpcjukmgeopjnq";
 
 /** True if any of the URLs points at the production Supabase project. */
 export function pointsAtProduction(values) {
-  return values.some((v) => typeof v === "string" && v.includes(PRODUCTION_DB_REF));
+  return values.some((v) => typeof v === "string" && v.toLowerCase().includes(PRODUCTION_DB_REF));
 }

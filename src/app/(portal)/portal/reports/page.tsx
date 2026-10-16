@@ -1,11 +1,15 @@
 import { BriefView } from "@/components/BriefView";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { notFound } from "next/navigation";
 import { requireOperatorFeature } from "@/lib/auth/portal";
+import { newLayoutEnabled } from "@/lib/brand";
 import { portalBriefs } from "@/lib/dal/portal";
 import { formatDate } from "@/lib/format";
 
 export default async function ReportsPage() {
   const { user } = await requireOperatorFeature("portal.dashboard");
+  // Phase 1 page: not part of the pilot experience while NEW_LAYOUT is off.
+  if (!newLayoutEnabled()) notFound();
   const briefs = await portalBriefs({ id: user.id, role: user.role, operatorId: user.operatorId }, 52);
   const [latest, ...past] = briefs;
   return (

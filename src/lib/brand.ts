@@ -42,3 +42,25 @@ export function brandFor(value: string | undefined): Brand {
 export function getBrand(): Brand {
   return brandFor(process.env.PRODUCT_BRAND);
 }
+
+/**
+ * Whether the Phase 1 layouts (new navigation, portal Overview / Action plan /
+ * Reports / Account & team, "Business at a glance" admin overview) are on.
+ *
+ *   NEW_LAYOUT=true|on|1      → on
+ *   NEW_LAYOUT=false|off|0    → off (the pre-Phase-1 pilot experience)
+ *   unset                     → on for Findable, off for the pilot
+ *
+ * So the Rotorua pilot (PRODUCT_BRAND unset) sees no change unless someone
+ * opts it in explicitly.
+ */
+export function newLayoutFor(flag: string | undefined, brand: Brand): boolean {
+  const v = flag?.trim().toLowerCase();
+  if (v === "true" || v === "on" || v === "1") return true;
+  if (v === "false" || v === "off" || v === "0") return false;
+  return brand.id === "findable";
+}
+
+export function newLayoutEnabled(): boolean {
+  return newLayoutFor(process.env.NEW_LAYOUT, getBrand());
+}

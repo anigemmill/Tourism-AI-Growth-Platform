@@ -63,11 +63,14 @@ if (env === "production") {
   validateUrls("Production");
   console.log("Applying database migrations (production)…");
   migrate();
+} else if (pointsAtProduction([process.env.DATABASE_URL, process.env.DIRECT_URL])) {
+  // Any non-production build (staging or not) whose URLs name the production
+  // project fails here, before migrations, seeding or `next build`. The app
+  // also refuses such a connection at runtime (src/lib/prisma.ts).
+  console.error(`Refusing to build: the ${env} database URLs point at the PRODUCTION project. Remove them or use a separate staging project (docs/STAGING.md).`);
+  process.exit(1);
 } else if (env === "preview" && process.env.STAGING_DATABASE === "true") {
-  if (pointsAtProduction([process.env.DATABASE_URL, process.env.DIRECT_URL])) {
-    console.error("Refusing to migrate: the Preview database URLs point at the PRODUCTION project. Use a separate staging project.");
-    process.exit(1);
-  }
+  console.log("Staging safeguard passed: the Preview database URLs do not point at the production project.");
   validateUrls("Preview");
   console.log("Applying database migrations (staging, preview)…");
   migrate();

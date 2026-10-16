@@ -7,10 +7,13 @@ import { accountOverview, billingOverview, SECURITY_ACTIONS, signInSnapshot } fr
 import { formatMoney } from "@/lib/billing/calc";
 import { OPERATOR_STATUS_LABELS } from "@/lib/labels";
 import type { OperatorStatus } from "@/generated/prisma";
+import { newLayoutEnabled } from "@/lib/brand";
+import { LegacyAdminOverview } from "./LegacyOverview";
 
 const STAGES: OperatorStatus[] = ["PROSPECT", "INVITED", "ONBOARDING", "ACTIVE", "PAUSED", "COMPLETED", "WITHDRAWN"];
 
 export default async function AdminDashboard() {
+  if (!newLayoutEnabled()) return <LegacyAdminOverview />;
   const me = await requirePermission("admin.dashboard");
   const [accounts, billing, stages, recent, security, signIns, onboarding] = await Promise.all([
     accountOverview(),

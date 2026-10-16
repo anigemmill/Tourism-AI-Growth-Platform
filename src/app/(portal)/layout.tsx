@@ -2,12 +2,14 @@ import { AppShell } from "@/components/AppShell";
 import { requireOperator } from "@/lib/auth/portal";
 import { logout } from "@/app/actions/auth";
 import { prisma } from "@/lib/prisma";
-import { getBrand } from "@/lib/brand";
+import { LegacyAppShell } from "@/components/LegacyAppShell";
+import { getBrand, newLayoutEnabled } from "@/lib/brand";
 
 // Operator portal. Every page below re-checks access itself (requireOperator
 // / requireOperatorFeature); this layout only builds the frame.
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, features } = await requireOperator();
+  if (!newLayoutEnabled()) return <LegacyPortalLayout user={user} features={features}>{children}</LegacyPortalLayout>;
   const brand = getBrand();
   const op = await prisma.operator.findUnique({
     where: { id: user.operatorId },
@@ -36,5 +38,28 @@ export default async function PortalLayout({ children }: { children: React.React
     >
       {children}
     </AppShell>
+  );
+}
+
+// Rotorua pilot (NEW_LAYOUT off): the pre-Phase-1 portal frame, unchanged.
+async function LegacyPortalLayout({ user, features, children }: Awaited<ReturnType<typeof requireOperator>> & { children: React.ReactNode }) {
+  const op = await prisma.operator.findUnique({ where: { id: user.operatorId }, select: { name: true } });
+  return (
+    <LegacyAppShell
+      productLabel="Growth Pilot Portal"
+      user={{ name: user.name, roleLabel: "Tourism Operator", context: op?.name }}
+      logoutAction={logout}
+      nav={[
+        {
+          items: [
+            { href: "/portal", label: "My business" },
+            ...(features.includes("portal.collective") ? [{ href: "/portal/collective", label: "Growth Collective" }] : []),
+          ],
+        },
+        { items: [{ href: "/portal/account", label: "My account" }] },
+      ]}
+    >
+      {children}
+    </LegacyAppShell>
   );
 }
