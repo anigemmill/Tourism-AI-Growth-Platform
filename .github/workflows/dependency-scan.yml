@@ -1,0 +1,46 @@
+name: Dependency scan
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 19 * * 0" # weekly, Monday morning NZ time
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-scan-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # Pull requests: block a PR that adds or upgrades to a package with a known
+  # high or critical vulnerability. Existing advisories don't block.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+
+  # Every push and weekly: audit what ships. Critical advisories in runtime
+  # dependencies fail the job; everything else is reported in the log.
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Full report (not blocking)
+        run: npm audit || true
+      - name: Runtime dependencies, critical (blocking)
+        run: npm audit --omit=dev --audit-level=critical

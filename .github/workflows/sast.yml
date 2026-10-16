@@ -1,0 +1,43 @@
+name: Static analysis
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sast-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SEMGREP_VERSION: 1.181.0
+      # Open-source rules from github.com/semgrep/semgrep-rules, pinned to a
+      # commit so results only change when this pin is updated.
+      RULES_COMMIT: 17e31e11ebac99fb7dfe1cd288f7a32151b6f3f9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Install Semgrep and rules
+        run: |
+          python3 -m venv "$RUNNER_TEMP/semgrep"
+          "$RUNNER_TEMP/semgrep/bin/pip" install --quiet "semgrep==${SEMGREP_VERSION}"
+          git init --quiet "$RUNNER_TEMP/rules"
+          git -C "$RUNNER_TEMP/rules" fetch --quiet --depth 1 https://github.com/semgrep/semgrep-rules "$RULES_COMMIT"
+          git -C "$RUNNER_TEMP/rules" checkout --quiet FETCH_HEAD
+      - name: Scan (security rules only)
+        # The security rule sets for JavaScript and TypeScript. The baseline
+        # was clean when this was added, so any finding fails the job.
+        run: |
+          configs=()
+          while IFS= read -r d; do configs+=(--config "$d"); done < <(find "$RUNNER_TEMP/rules/javascript" "$RUNNER_TEMP/rules/typescript" -type d -name security | sort)
+          "$RUNNER_TEMP/semgrep/bin/semgrep" scan --metrics=off --disable-version-check --error \
+            "${configs[@]}" \
+            --exclude src/generated --exclude tests --exclude '*.test.ts' --exclude '*.test.mjs' \
+            .
