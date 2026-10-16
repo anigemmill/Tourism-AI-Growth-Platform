@@ -4,6 +4,7 @@ import { logout } from "@/app/actions/auth";
 import { prisma } from "@/lib/prisma";
 import { LegacyAppShell } from "@/components/LegacyAppShell";
 import { getBrand, newLayoutEnabled } from "@/lib/brand";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // Operator portal. Every page below re-checks access itself (requireOperator
 // / requireOperatorFeature); this layout only builds the frame.
@@ -37,6 +38,7 @@ export default async function PortalLayout({ children }: { children: React.React
       ]}
     >
       {children}
+      <SiteFooter className="mt-12 border-t border-line pt-4" />
     </AppShell>
   );
 }
@@ -60,6 +62,7 @@ async function LegacyPortalLayout({ user, features, children }: Awaited<ReturnTy
       ]}
     >
       {children}
+      <SiteFooter className="mt-12 border-t border-line pt-4" />
     </LegacyAppShell>
   );
 }

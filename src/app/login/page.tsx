@@ -5,6 +5,7 @@ import { AuthHeading, AuthShell } from "@/components/auth/AuthShell";
 import Link from "next/link";
 import { getBrand, newLayoutEnabled } from "@/lib/brand";
 import { LoginForm } from "./LoginForm";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -46,6 +47,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <p className="text-xs leading-relaxed text-subtle">
           Operators only see their own business information and content the cohort has agreed to share.
         </p>
+        <SiteFooter />
       </div>
     </AuthShell>
   );

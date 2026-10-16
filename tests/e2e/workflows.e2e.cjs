@@ -170,6 +170,28 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
   await o.goto(B + "/portal");
   await o.fill("#f-title", "Lots of rain cancellations"); await o.fill("#f-summary", "Three cancellations"); await o.click("button:has-text('Send update')");
   await check("operator can submit an update", await seen(status(o).filter({ hasText: /Thanks/ })));
+  if (NEW_LAYOUT) {
+    // Plan publication: a new plan item is staff only until staff show it to the client.
+    const pubTitle = `E2E publish ${stamp}`;
+    await p.goto(B + "/operators");
+    await Promise.all([p.waitForURL(/\/operators\/c/), p.locator("a:has-text('Lakeside Retreat Lodge')").first().click()]);
+    await Promise.all([p.waitForURL(/\/opportunities\/new/), p.click("a:has-text('Add opportunity')")]);
+    await p.fill("#f-title", pubTitle); await p.selectOption("#f-area", "ENQUIRIES_CONVERSION"); await p.selectOption("#f-solutionType", "AUTOMATION");
+    await p.fill("#f-problem", "Slow replies"); await p.fill("#f-proposedSolution", "Auto ack");
+    await Promise.all([p.waitForURL(/\/opportunities\/c/), p.click("button:has-text('Create opportunity')")]);
+    await check("new plan item starts staff only", await seen(p.getByText("Staff only", { exact: true })));
+    await o.goto(B + "/portal/plan");
+    await check("client can't see a staff-only plan item", (await o.getByText(pubTitle).count()) === 0);
+    await p.click("button:has-text('Show to client')");
+    await check("staff can show the item to the client", await seen(status(p).filter({ hasText: /shown to the client/ })));
+    await o.goto(B + "/portal/plan");
+    await check("client sees the item once shown", await seen(o.getByText(pubTitle)));
+    // Findable clients have no Growth Collective unless it's switched on for them.
+    await check("Findable client has no Growth Collective link", (await o.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Growth Collective" }).count()) === 0);
+    await o.goto(B + "/portal/collective");
+    await check("Growth Collective page redirects for a Findable client", new URL(o.url()).pathname === "/portal");
+    await o.goto(B + "/portal");
+  }
   // Layout flag: the pilot keeps its pre-Phase-1 portal; Phase 1 pages exist only when enabled.
   const main = o.getByRole("navigation", { name: "Main" });
   if (NEW_LAYOUT) {
@@ -181,6 +203,15 @@ const status = (p) => p.locator('[aria-live="polite"]').filter({ hasText: /\S/ }
     const plan = await o.goto(B + "/portal/plan"); await check("pilot layout: Phase 1 pages are not reachable", plan.status() === 404);
     await o.goto(B + "/portal");
   }
+  // Error and legal pages
+  const nf = await o.goto(B + `/no-such-page-${stamp}`);
+  await check("unknown page shows the branded not-found page", nf.status() === 404 && await seen(o.getByText("We can't find that page")));
+  const anon = await (await b.newContext()).newPage();
+  const lp = await anon.goto(B + "/privacy");
+  await check("draft privacy policy is not published", lp.status() === 404);
+  const tp = await anon.goto(B + "/terms");
+  await check("draft terms are not published", tp.status() === 404);
+  await o.goto(B + "/portal");
   // Logout revokes session
   await o.click("button:has-text('Sign out')"); await o.waitForURL(/login/);
   await o.goto(B + "/portal"); await check("signed-out user redirected to login", /login/.test(o.url()));
