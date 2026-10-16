@@ -30,12 +30,14 @@ test("rate limit keys are independent", async () => {
 });
 
 test("rate limit only counts hits inside the window", async () => {
+  // The window must comfortably exceed two database round trips, or a slow
+  // CI connection lets the first hit expire before the second check.
   const shortKey = `rl-short-${randomBytes(4).toString("hex")}`;
-  await checkRateLimit(shortKey, 50, 1);
-  const blocked = await checkRateLimit(shortKey, 50, 1);
+  await checkRateLimit(shortKey, 1_000, 1);
+  const blocked = await checkRateLimit(shortKey, 1_000, 1);
   assert.equal(blocked.allowed, false);
-  await new Promise((resolve) => setTimeout(resolve, 80));
-  const afterWindow = await checkRateLimit(shortKey, 50, 1);
+  await new Promise((resolve) => setTimeout(resolve, 1_200));
+  const afterWindow = await checkRateLimit(shortKey, 1_000, 1);
   assert.equal(afterWindow.allowed, true, "a hit outside the window must not count against the limit");
 });
 
