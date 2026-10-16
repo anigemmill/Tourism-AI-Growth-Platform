@@ -118,6 +118,23 @@ test("initiative participants see the initiative; the directory exposes public f
   assert.deepEqual(Object.keys(b).sort(), ["category", "id", "name", "websiteUrl"]);
 });
 
+test("a business with no programme sees no directory, not every other unenrolled business", async () => {
+  const [x, y] = await Promise.all(
+    ["X", "Y"].map((n) => prisma.operator.create({ data: { name: `Unenrolled ${n} ${tag}`, category: "activity", status: "ACTIVE" } })),
+  );
+  try {
+    const actorX = { id: "x", role: "OPERATOR" as const, operatorId: x.id };
+    assert.deepEqual(await portal.portalDirectory(actorX), []);
+    assert.deepEqual(await portal.portalWorkshops(actorX), []);
+    // Enrolled businesses still see their own cohort, and never the unenrolled ones.
+    const dir = await portal.portalDirectory(actorA());
+    assert.ok(dir.some((d) => d.id === B));
+    assert.ok(!dir.some((d) => d.id === x.id || d.id === y.id));
+  } finally {
+    await prisma.operator.deleteMany({ where: { id: { in: [x.id, y.id] } } });
+  }
+});
+
 test("login: success creates a hashed server-side session; token resolves to the user", async () => {
   const r = await attemptLogin(emails.a.toUpperCase(), PW);
   assert.ok(r.ok);

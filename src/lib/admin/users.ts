@@ -92,13 +92,19 @@ export async function inviteUser(
     const reinvitable = existing && !existing.passwordHash && (existing.status === "PENDING" || existing.status === "ARCHIVED");
     if (existing && !reinvitable) throw new AdminError("An account with that email already exists.");
     if (existing) guardTarget(actor, existing);
-    const user = existing
-      ? await prisma.user.update({ where: { id: existing.id }, data: { name: input.name, role: input.role, status: "PENDING" } })
-      : await prisma.user.create({ data: { email, name: input.name, role: input.role, status: "PENDING" } });
-    if (input.businessIds.length) {
-      await prisma.userBusiness.createMany({ data: input.businessIds.map((operatorId) => ({ userId: user.id, operatorId })), skipDuplicates: true });
-      if (input.role === "OPERATOR") await prisma.user.update({ where: { id: user.id }, data: { operatorId: input.businessIds[0] } });
-    }
+    // A re-invite replaces the account's businesses with this invitation's
+    // selection, so access left over from an earlier invitation never carries over.
+    const operatorId = input.role === "OPERATOR" ? input.businessIds[0] : null;
+    const user = await prisma.$transaction(async (tx) => {
+      const u = existing
+        ? await tx.user.update({ where: { id: existing.id }, data: { name: input.name, role: input.role, status: "PENDING", operatorId } })
+        : await tx.user.create({ data: { email, name: input.name, role: input.role, status: "PENDING", operatorId } });
+      if (existing) await tx.userBusiness.deleteMany({ where: { userId: u.id } });
+      if (input.businessIds.length) {
+        await tx.userBusiness.createMany({ data: input.businessIds.map((id) => ({ userId: u.id, operatorId: id })), skipDuplicates: true });
+      }
+      return u;
+    });
     const delivery = await sendAccountLink(user.id, "INVITE", { actorId: actor.id, actorName: actor.name, allowManualLink: actor.role === "FOUNDER" });
     await audit(actor.id, "user.invite", "user", user.id, `Invited ${email} as ${ROLE_LABELS[input.role]}${delivery.emailed ? "" : " (email not sent)"}`, {
       role: input.role, businessIds: input.businessIds,
@@ -132,8 +138,15 @@ export async function revokeInvite(actor: AdminActor, userId: string): Promise<A
     guardTarget(actor, u);
     if (u.status !== "PENDING") throw new AdminError("This invitation has already been accepted.");
     await revokeTokens(u.id, "INVITE");
-    await prisma.user.update({ where: { id: u.id }, data: { status: "ARCHIVED" } });
-    await audit(actor.id, "user.invite_revoked", "user", u.id, `Revoked invitation for ${u.email}`);
+    // A revoked invitation keeps no access: its business links go with it.
+    const links = await prisma.userBusiness.findMany({ where: { userId: u.id }, select: { operatorId: true } });
+    await prisma.$transaction([
+      prisma.userBusiness.deleteMany({ where: { userId: u.id } }),
+      prisma.user.update({ where: { id: u.id }, data: { status: "ARCHIVED", operatorId: null } }),
+    ]);
+    await audit(actor.id, "user.invite_revoked", "user", u.id, `Revoked invitation for ${u.email}`, {
+      removedBusinessIds: links.map((l) => l.operatorId),
+    });
     return { ok: true, message: "Invitation revoked. The link no longer works." };
   });
 }
