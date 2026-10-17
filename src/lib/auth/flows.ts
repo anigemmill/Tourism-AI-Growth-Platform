@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import type { AuthTokenPurpose } from "@/generated/prisma";
 import { audit } from "@/lib/audit";
-import { appUrl, emailConfigured, sendEmail } from "@/lib/email";
+import { appUrl, appUrlProblem, emailConfigured, sendEmail } from "@/lib/email";
 import { getBrand } from "@/lib/brand";
 import { consumeToken, issueToken, revokeTokens, TOKEN_TTL_MS } from "./account-tokens";
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "./password";
@@ -80,6 +80,8 @@ export async function sendAccountLink(
   opts: { actorId: string | null; actorName?: string; allowManualLink?: boolean }
 ): Promise<Delivery> {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true } });
+  // Never issue a link that would point at the wrong host (see appUrlProblem).
+  if (appUrlProblem()) return { emailed: false };
   const { token } = await issueToken(userId, purpose, opts.actorId);
   const link = linkFor(purpose, token);
   const res = await sendEmail({ to: user.email, ...emailFor(purpose, user.name, link, opts.actorName) });

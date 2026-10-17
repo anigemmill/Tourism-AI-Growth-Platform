@@ -5,11 +5,11 @@ import { FilterBar, Pager } from "@/components/admin/ListControls";
 import { fmtDate, fmtDateTime, RoleBadge, UserStatusBadge } from "@/components/admin/badges";
 import { can, requirePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { emailConfigured } from "@/lib/email";
+import { emailStatus } from "@/lib/admin/email-check";
 import { oneOf, pageOf, param } from "@/lib/admin/paging";
 import { assignableRoles } from "@/lib/rbac/permissions";
 import { ROLE_LABELS, USER_STATUS_LABELS, options } from "@/lib/labels";
-import { inviteUser } from "./actions";
+import { emailCheck, inviteUser } from "./actions";
 
 const ROLES = ["FOUNDER", "ADMIN", "PROGRAMME_MANAGER", "ANALYST", "OPERATOR"] as const;
 const STATUSES = ["PENDING", "ACTIVE", "SUSPENDED", "ARCHIVED"] as const;
@@ -38,6 +38,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
     prisma.operator.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const canManage = can(me, "users.manage");
+  const email = emailStatus();
   const roleOpts = (canManage && can(me, "users.roles") ? assignableRoles(me.role) : ["OPERATOR", "ANALYST"]).map((r) => ({ value: r, label: ROLE_LABELS[r as keyof typeof ROLE_LABELS] }));
 
   return (
@@ -72,9 +73,22 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
         <Pager base="/admin/users" sp={sp} page={page} total={total} />
       </Card>
 
+      {me.role === "FOUNDER" && (
+        <Card title="Account email" description="How invitations and password resets are sent. The test goes only to your own address and contains no link." className="mb-6">
+          <dl className="mb-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+            <dt className="text-muted">Provider</dt><dd>{email.configured ? "Resend (key and sender set)" : "Not configured"}</dd>
+            <dt className="text-muted">Sender</dt><dd className="break-all">{email.sender ?? "—"}</dd>
+            <dt className="text-muted">Links point to</dt><dd className="break-all">{email.linkProblem ? "— (blocked, see below)" : email.linkBase}</dd>
+          </dl>
+          {email.linkProblem && <div className="mb-4"><Notice tone="warning">{email.linkProblem} Until then no invitation or reset link is issued.</Notice></div>}
+          {email.configured && <ActionForm action={emailCheck} submitLabel={`Send a test email to ${me.email}`} variant="secondary" />}
+        </Card>
+      )}
+
       {canManage && (
         <Card title="Invite a user" description="They receive a single-use link (valid 7 days) to set their own password. Tourism operators must be linked to at least one business.">
-          {!emailConfigured() && (
+          {email.linkProblem && <div className="mb-4"><Notice tone="warning">Invitation links are blocked: {email.linkProblem}</Notice></div>}
+          {!email.configured && (
             <div className="mb-4"><Notice tone="warning">Email isn&apos;t configured (RESEND_API_KEY / EMAIL_FROM), so invitations can&apos;t be emailed. A super admin will be shown a single-use link to hand over instead.</Notice></div>
           )}
           <ActionForm action={inviteUser} submitLabel="Send invitation" resetOnSuccess>

@@ -7,6 +7,7 @@ import { guarded } from "@/lib/actions";
 import { confirmed, NOT_CONFIRMED, parseForm, type ActionState } from "@/lib/forms";
 import { checkRateLimit } from "@/lib/rate-limit";
 import * as admin from "@/lib/admin/users";
+import { sendTestEmail } from "@/lib/admin/email-check";
 
 const ROLES = ["FOUNDER", "ADMIN", "PROGRAMME_MANAGER", "ANALYST", "OPERATOR"] as const;
 
@@ -100,4 +101,15 @@ export async function setUserPermission(userId: string, permission: string, _: A
   const v = String(fd.get("value") ?? "");
   const granted = v === "grant" ? true : v === "deny" ? false : null;
   return guarded(async () => done(await admin.setUserPermission(actor, userId, permission, granted), userPath(userId)));
+}
+
+export async function emailCheck(): Promise<ActionState> {
+  const actor = await requirePermission("users.manage");
+  if (actor.role !== "FOUNDER") return { error: "Only a super admin can run the email check." };
+  const limit = await checkRateLimit(`email-check:${actor.id}`, 60 * 60_000, 5);
+  if (!limit.allowed) return { error: "Email check limit reached. Try again in an hour." };
+  return guarded(async () => {
+    const r = await sendTestEmail(actor);
+    return r.ok ? { ok: r.message } : { error: r.error };
+  });
 }
