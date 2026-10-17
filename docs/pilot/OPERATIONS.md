@@ -11,7 +11,12 @@ checks yet.
 
 All of these must be true:
 - [ ] Every P0 fix is released and verified in Production (see the release plan).
-- [ ] Email links point at the app (`APP_URL`) and a test invitation and password reset have worked end to end.
+- [ ] Email works end to end (`docs/pilot/EMAIL-DELIVERY.md`, steps 1–9):
+  - [ ] `theoutsidein.nz` shows **Verified** in Resend → Domains.
+  - [ ] A Sending-access key is in `RESEND_API_KEY` (Production), and `EMAIL_FROM` uses the verified domain.
+  - [ ] `APP_URL` = `https://app.theoutsidein.nz` (Production) and that address opens the app.
+  - [ ] Back office → Users → **Send a test email to me** is accepted, and the email arrives (not in spam).
+  - [ ] A test invitation and a password reset to an address we control work, and the links start with `https://app.theoutsidein.nz/`.
 - [ ] Privacy policy and pilot terms are approved and published (`/privacy`, `/terms`).
 - [ ] A support address is monitored and `SUPPORT_EMAIL` is set.
 - [ ] Backups are confirmed and one restore test is done (`docs/runbooks/BACKUP-AND-RESTORE.md`).
