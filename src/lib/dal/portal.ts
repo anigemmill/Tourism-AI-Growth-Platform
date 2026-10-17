@@ -3,7 +3,7 @@
 // so access-control tests can call it directly.
 
 import { prisma } from "@/lib/prisma";
-import { ownedOnlyWhere, scopedWhere, SHARED_VISIBILITIES, type Actor } from "@/lib/authz";
+import { ownedOnlyWhere, ownOrInitiativeWhere, sharedWithBusinessWhere, SHARED_VISIBILITIES, type Actor } from "@/lib/authz";
 
 function requireOperator(actor: Actor): string {
   if (actor.role !== "OPERATOR" || !actor.operatorId) throw new Error("Operator actor required");
@@ -49,7 +49,9 @@ export async function portalMeasurements(actor: Actor) {
 }
 
 export async function portalExperiments(actor: Actor) {
-  return prisma.experiment.findMany({ where: scopedWhere(actor, { hasInitiative: true }), orderBy: { createdAt: "desc" } });
+  // "My business" view: own and shared-initiative experiments only. Other
+  // businesses' shared work belongs in the Collective, under consent rules.
+  return prisma.experiment.findMany({ where: ownOrInitiativeWhere(actor), orderBy: { createdAt: "desc" } });
 }
 
 export async function portalAssessment(actor: Actor) {
@@ -104,8 +106,10 @@ export async function portalBilling(actor: Actor) {
 }
 
 export async function portalLearnings(actor: Actor) {
+  const operatorId = requireOperator(actor);
+  const op = await prisma.operator.findUniqueOrThrow({ where: { id: operatorId }, select: { programmeId: true } });
   return prisma.learning.findMany({
-    where: { ...scopedWhere(actor, { hasInitiative: true }), culturalReview: { not: "REQUIRED" } },
+    where: { ...sharedWithBusinessWhere(actor, op.programmeId), culturalReview: { not: "REQUIRED" } },
     orderBy: { createdAt: "desc" },
     select: { id: true, title: true, body: true, topic: true, isReusableProcess: true, visibility: true, operatorId: true, createdAt: true },
   });

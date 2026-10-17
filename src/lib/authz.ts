@@ -61,6 +61,41 @@ export function scopedWhere(actor: Actor, opts: { hasInitiative?: boolean } = {}
   return { OR: or };
 }
 
+/**
+ * Operator-owned records (with `operatorId`, `visibility`, `operator` and
+ * `initiative` relations) that a client business may read in its portal,
+ * honouring what each owner consented to:
+ *   - its own records (not INTERNAL), and its shared initiatives' records;
+ *   - COHORT: only from businesses in the same programme (cohort), or with no
+ *     owning business, and only when the viewer is itself in a programme;
+ *   - PUBLIC_APPROVED: from anyone (approved for a public case study);
+ *   - AGGREGATE_APPROVED: never item by item (anonymised totals only).
+ * Staff get an empty filter; an operator with no business gets nothing.
+ */
+export function sharedWithBusinessWhere(actor: Actor, viewerProgrammeId: string | null) {
+  if (isStaffRole(actor.role)) return {};
+  if (!actor.operatorId) return { id: "__none__" };
+  const or: Record<string, unknown>[] = [
+    { operatorId: actor.operatorId, visibility: { not: "INTERNAL" as Visibility } },
+    { visibility: { not: "INTERNAL" as Visibility }, initiative: { participants: { some: { operatorId: actor.operatorId } } } },
+    { visibility: "PUBLIC_APPROVED" as Visibility },
+  ];
+  if (viewerProgrammeId) {
+    or.push({ visibility: "COHORT" as Visibility, OR: [{ operatorId: null }, { operator: { programmeId: viewerProgrammeId } }] });
+  }
+  return { OR: or };
+}
+
+/** A business's own records plus its shared initiatives' records (never other businesses'). */
+export function ownOrInitiativeWhere(actor: Actor) {
+  if (isStaffRole(actor.role)) return {};
+  if (!actor.operatorId) return { id: "__none__" };
+  return {
+    visibility: { not: "INTERNAL" as Visibility },
+    OR: [{ operatorId: actor.operatorId }, { initiative: { participants: { some: { operatorId: actor.operatorId } } } }],
+  };
+}
+
 /** Records that must only ever be seen by their owner + staff (e.g. tasks). */
 export function ownedOnlyWhere(actor: Actor) {
   if (isStaffRole(actor.role)) return {};
