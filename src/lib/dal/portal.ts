@@ -135,6 +135,9 @@ export async function portalWorkshops(actor: Actor) {
 export async function portalDirectory(actor: Actor) {
   const operatorId = requireOperator(actor);
   const op = await prisma.operator.findUniqueOrThrow({ where: { id: operatorId }, select: { programmeId: true } });
+  // No programme means no cohort. Without this, `programmeId: null` would match
+  // every other unenrolled business.
+  if (!op.programmeId) return [];
   return prisma.operator.findMany({
     where: { programmeId: op.programmeId, status: { in: ["ACTIVE", "ONBOARDING", "COMPLETED"] } },
     orderBy: { name: "asc" },

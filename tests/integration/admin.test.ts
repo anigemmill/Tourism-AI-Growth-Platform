@@ -95,6 +95,41 @@ test("invitation: resending invalidates the earlier link; revoking stops it", as
   assert.equal(again.ok, false, "an activated account can't be re-invited");
 });
 
+test("re-inviting a revoked invitee grants only the newly selected businesses", async () => {
+  const email = mail("reinvite");
+  assert.ok((await admin.inviteUser(superActor(), { name: "Re", email, role: "OPERATOR", businessIds: [A] })).ok);
+  const u = await prisma.user.findUniqueOrThrow({ where: { email } });
+  assert.ok((await admin.revokeInvite(superActor(), u.id)).ok);
+  assert.equal(await prisma.userBusiness.count({ where: { userId: u.id } }), 0, "revoking removes business links");
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).operatorId, null);
+
+  assert.ok((await admin.inviteUser(superActor(), { name: "Re", email, role: "OPERATOR", businessIds: [B] })).ok);
+  assert.ok((await acceptInvite(linkFrom(email), PW)).ok);
+  const login = await attemptLogin(email, PW);
+  assert.ok(login.ok);
+  if (!login.ok) return;
+  assert.equal(login.user.operatorId, B);
+  const links = await prisma.userBusiness.findMany({ where: { userId: u.id }, select: { operatorId: true } });
+  assert.deepEqual(links.map((l) => l.operatorId), [B], "only the re-invite's business is linked");
+  // Pointing the session at the old business (as switching would) is ignored.
+  await prisma.user.update({ where: { id: u.id }, data: { operatorId: A } });
+  assert.equal((await userForToken(login.token))?.operatorId, B);
+});
+
+test("re-inviting a pending invitee replaces, not adds to, their businesses", async () => {
+  const email = mail("pending-reinvite");
+  assert.ok((await admin.inviteUser(superActor(), { name: "Pe", email, role: "OPERATOR", businessIds: [A] })).ok);
+  assert.ok((await admin.inviteUser(superActor(), { name: "Pe", email, role: "OPERATOR", businessIds: [B] })).ok);
+  const u = await prisma.user.findUniqueOrThrow({ where: { email } });
+  const links = await prisma.userBusiness.findMany({ where: { userId: u.id }, select: { operatorId: true } });
+  assert.deepEqual(links.map((l) => l.operatorId), [B]);
+  assert.equal(u.operatorId, B);
+  // Re-invited as staff with no businesses: no business links remain.
+  assert.ok((await admin.inviteUser(superActor(), { name: "Pe", email, role: "ANALYST", businessIds: [] })).ok);
+  assert.equal(await prisma.userBusiness.count({ where: { userId: u.id } }), 0);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).operatorId, null);
+});
+
 test("legacy active flag mirrors status both ways (previous release + rollback safety)", async () => {
   const email = mail("legacy");
   const u = await prisma.user.create({ data: { email, name: "L", role: "ANALYST", passwordHash: await hashPassword(PW) } });
