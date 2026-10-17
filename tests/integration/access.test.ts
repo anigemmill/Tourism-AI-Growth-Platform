@@ -118,48 +118,6 @@ test("initiative participants see the initiative; the directory exposes public f
   assert.deepEqual(Object.keys(b).sort(), ["category", "id", "name", "websiteUrl"]);
 });
 
-test("other businesses' shared items reach a client only as far as their consent goes", async () => {
-  const other = await prisma.programme.create({ data: { name: `Other ${tag}`, startDate: new Date(), active: false } });
-  const C = (await prisma.operator.create({ data: { name: `Op C ${tag}`, category: "activity", status: "ACTIVE", programmeId: other.id } })).id;
-  const D = (await prisma.operator.create({ data: { name: `Op D ${tag}`, category: "activity", status: "ACTIVE" } })).id;
-  const exp = (operatorId: string, title: string, visibility: "COHORT" | "AGGREGATE_APPROVED" | "PUBLIC_APPROVED") =>
-    ({ title, operatorId, visibility, hypothesis: "h", problem: "p", intervention: "i", primaryMetric: "GUEST_NIGHTS" as const });
-  try {
-    await prisma.experiment.createMany({
-      data: [exp(B, `B-cohort-exp-${tag}`, "COHORT"), exp(B, `B-aggregate-exp-${tag}`, "AGGREGATE_APPROVED"), exp(C, `C-public-exp-${tag}`, "PUBLIC_APPROVED")],
-    });
-    await prisma.learning.createMany({
-      data: [
-        { title: `B-cohort-learning-${tag}`, body: "x", operatorId: B, visibility: "COHORT", createdBy: "t" },
-        { title: `B-aggregate-learning-${tag}`, body: "x", operatorId: B, visibility: "AGGREGATE_APPROVED", createdBy: "t" },
-        { title: `C-cohort-learning-${tag}`, body: "x", operatorId: C, visibility: "COHORT", createdBy: "t" },
-        { title: `C-public-learning-${tag}`, body: "x", operatorId: C, visibility: "PUBLIC_APPROVED", createdBy: "t" },
-      ],
-    });
-    const mine = (rows: { title: string }[]) => rows.map((r) => r.title).filter((t) => t.includes(tag)).sort();
-
-    // The overview lists this business's own experiments and its initiatives, never other businesses'.
-    assert.deepEqual(mine(await portal.portalExperiments(actorA())), [`shared-exp-${tag}`]);
-
-    // Collective learnings: same-programme cohort sharing and public case studies only.
-    // "Anonymised aggregate" consent never shows another business's item.
-    assert.deepEqual(mine(await portal.portalLearnings(actorA())), [`B-cohort-learning-${tag}`, `C-public-learning-${tag}`, `cohort-learning-${tag}`].sort());
-    // A business in another programme never sees this cohort's businesses' items.
-    // (Staff-written cohort items have no owning business or programme, so they
-    // reach any business that is in a programme.)
-    const cLearnings = mine(await portal.portalLearnings({ id: "x", role: "OPERATOR", operatorId: C }));
-    assert.ok(!cLearnings.includes(`B-cohort-learning-${tag}`));
-    assert.ok(!cLearnings.includes(`B-aggregate-learning-${tag}`));
-    // A business in no programme sees only public items from others.
-    assert.deepEqual(mine(await portal.portalLearnings({ id: "x", role: "OPERATOR", operatorId: D })), [`C-public-learning-${tag}`]);
-  } finally {
-    await prisma.experiment.deleteMany({ where: { title: { contains: tag }, operatorId: { in: [B, C] } } });
-    await prisma.learning.deleteMany({ where: { title: { contains: tag }, operatorId: { in: [B, C] } } });
-    await prisma.operator.deleteMany({ where: { id: { in: [C, D] } } });
-    await prisma.programme.deleteMany({ where: { id: other.id } });
-  }
-});
-
 test("login: success creates a hashed server-side session; token resolves to the user", async () => {
   const r = await attemptLogin(emails.a.toUpperCase(), PW);
   assert.ok(r.ok);
@@ -218,5 +176,47 @@ test("portal team and billing views are scoped to the operator's own business", 
     await assert.rejects(portal.portalTeam({ id: "u", role: "OPERATOR", operatorId: null }));
   } finally {
     await prisma.invoice.deleteMany({ where: { number: { in: [`A-INV-${tag}`, `B-INV-${tag}`] } } });
+  }
+});
+
+test("other businesses' shared items reach a client only as far as their consent goes", async () => {
+  const other = await prisma.programme.create({ data: { name: `Other ${tag}`, startDate: new Date(), active: false } });
+  const C = (await prisma.operator.create({ data: { name: `Op C ${tag}`, category: "activity", status: "ACTIVE", programmeId: other.id } })).id;
+  const D = (await prisma.operator.create({ data: { name: `Op D ${tag}`, category: "activity", status: "ACTIVE" } })).id;
+  const exp = (operatorId: string, title: string, visibility: "COHORT" | "AGGREGATE_APPROVED" | "PUBLIC_APPROVED") =>
+    ({ title, operatorId, visibility, hypothesis: "h", problem: "p", intervention: "i", primaryMetric: "GUEST_NIGHTS" as const });
+  try {
+    await prisma.experiment.createMany({
+      data: [exp(B, `B-cohort-exp-${tag}`, "COHORT"), exp(B, `B-aggregate-exp-${tag}`, "AGGREGATE_APPROVED"), exp(C, `C-public-exp-${tag}`, "PUBLIC_APPROVED")],
+    });
+    await prisma.learning.createMany({
+      data: [
+        { title: `B-cohort-learning-${tag}`, body: "x", operatorId: B, visibility: "COHORT", createdBy: "t" },
+        { title: `B-aggregate-learning-${tag}`, body: "x", operatorId: B, visibility: "AGGREGATE_APPROVED", createdBy: "t" },
+        { title: `C-cohort-learning-${tag}`, body: "x", operatorId: C, visibility: "COHORT", createdBy: "t" },
+        { title: `C-public-learning-${tag}`, body: "x", operatorId: C, visibility: "PUBLIC_APPROVED", createdBy: "t" },
+      ],
+    });
+    const mine = (rows: { title: string }[]) => rows.map((r) => r.title).filter((t) => t.includes(tag)).sort();
+
+    // The overview lists this business's own experiments and its initiatives, never other businesses'.
+    assert.deepEqual(mine(await portal.portalExperiments(actorA())), [`shared-exp-${tag}`]);
+
+    // Collective learnings: same-programme cohort sharing and public case studies only.
+    // "Anonymised aggregate" consent never shows another business's item.
+    assert.deepEqual(mine(await portal.portalLearnings(actorA())), [`B-cohort-learning-${tag}`, `C-public-learning-${tag}`, `cohort-learning-${tag}`].sort());
+    // A business in another programme never sees this cohort's businesses' items.
+    // (Staff-written cohort items have no owning business or programme, so they
+    // reach any business that is in a programme.)
+    const cLearnings = mine(await portal.portalLearnings({ id: "x", role: "OPERATOR", operatorId: C }));
+    assert.ok(!cLearnings.includes(`B-cohort-learning-${tag}`));
+    assert.ok(!cLearnings.includes(`B-aggregate-learning-${tag}`));
+    // A business in no programme sees only public items from others.
+    assert.deepEqual(mine(await portal.portalLearnings({ id: "x", role: "OPERATOR", operatorId: D })), [`C-public-learning-${tag}`]);
+  } finally {
+    await prisma.experiment.deleteMany({ where: { title: { contains: tag }, operatorId: { in: [B, C] } } });
+    await prisma.learning.deleteMany({ where: { title: { contains: tag }, operatorId: { in: [B, C] } } });
+    await prisma.operator.deleteMany({ where: { id: { in: [C, D] } } });
+    await prisma.programme.deleteMany({ where: { id: other.id } });
   }
 });
