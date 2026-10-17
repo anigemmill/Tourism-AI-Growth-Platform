@@ -109,6 +109,7 @@ export async function inviteUser(
 
 function deliveryMessage(d: Delivery, sent: string) {
   if (d.emailed) return sent;
+  if (d.manualLink && d.reason === "send_failed") return "The email couldn't be sent. Copy the single-use link below and share it with the person directly, then check the address.";
   if (d.manualLink) return "Email isn't configured, so nothing was sent. Copy the single-use link below and share it with the person directly.";
   return "Email isn't configured or failed, so nothing was sent. Configure RESEND_API_KEY and EMAIL_FROM, then resend.";
 }

@@ -10,11 +10,13 @@
 
 import { PrismaClient } from "../src/generated/prisma";
 import { seedDestination } from "../src/lib/seed/destination";
-import { seedGrowthOs, seedOptionsFromEnv } from "../src/lib/seed/growth";
+import { demoSeedProblem, seedGrowthOs, seedOptionsFromEnv } from "../src/lib/seed/growth";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const refused = demoSeedProblem();
+  if (refused) throw new Error(refused);
   const d = await seedDestination(prisma);
   console.log(`Seeded destination "${d.destination.name}", ${d.categories} experience categories, ${d.prompts} tracked prompts.`);
   await seedGrowthOs(prisma, seedOptionsFromEnv());

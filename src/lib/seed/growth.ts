@@ -10,6 +10,7 @@
 //    and labelled in the UI. None of it describes a real business.
 
 import { randomBytes } from "node:crypto";
+import { PRODUCTION_DB_REF } from "../db-url";
 import type { PrismaClient } from "../../generated/prisma";
 import { hashPassword } from "../auth/password";
 import { DEFAULT_STAGES } from "../domain/programme";
@@ -26,6 +27,19 @@ export interface SeedOptions {
   demo?: boolean;
   demoPassword?: string;
   quiet?: boolean;
+}
+
+/**
+ * Demo data (fictional businesses and accounts with known passwords) must
+ * never reach production. Returns why seeding the demo is refused, or null.
+ */
+export function demoSeedProblem(env: Record<string, string | undefined> = process.env): string | null {
+  if (env.SEED_DEMO !== "true") return null;
+  if (env.VERCEL_ENV === "production") return "Refusing SEED_DEMO=true: VERCEL_ENV is production.";
+  if ([env.DATABASE_URL, env.DIRECT_URL].some((u) => u?.toLowerCase().includes(PRODUCTION_DB_REF))) {
+    return "Refusing SEED_DEMO=true: the database URL points at the PRODUCTION project.";
+  }
+  return null;
 }
 
 /** Options from SEED_* environment variables (used by `npm run db:seed`). */

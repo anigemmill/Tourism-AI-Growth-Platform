@@ -285,3 +285,10 @@ body {
 /* Findable auth controls: pill button, white inputs on lavender. */
 :root[data-brand="findable"] .auth-btn { height: 3rem; border-radius: 999px; }
 :root[data-brand="findable"] .auth-input { height: 3rem; border-radius: 0.75rem; background: #ffffff; }
+
+/* Grid items default to min-width: auto, so one wide table (which scrolls in
+   its own container) could stretch a stacked page column past the screen on
+   phones. Let grid columns in the app's main area shrink to the viewport. */
+main .grid > * {
+  min-width: 0;
+}

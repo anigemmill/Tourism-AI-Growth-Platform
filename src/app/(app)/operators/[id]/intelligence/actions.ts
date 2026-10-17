@@ -9,6 +9,7 @@ import { guarded } from "@/lib/actions";
 import { visibilityChangeError } from "@/lib/authz";
 import { f, parseForm, type ActionState } from "@/lib/forms";
 import { buildBrief } from "@/lib/domain/brief";
+import { briefInputFor } from "@/lib/briefs";
 import { definitionFor } from "@/lib/integrations/registry";
 import { callClaude, isLLMConfigured } from "@/lib/llm/anthropic";
 
@@ -87,21 +88,8 @@ export async function generateBrief(operatorId: string): Promise<ActionState> {
   const user = await requirePermission("operators.edit");
   return guarded(async () => {
     const weekOf = new Date();
-    const [signals, opportunities, tasks, experiments, baselineCount] = await Promise.all([
-      prisma.signal.findMany({ where: { operatorId } }),
-      prisma.opportunity.findMany({ where: { operatorId } }),
-      prisma.task.findMany({ where: { operatorId }, include: { assignee: { select: { name: true } } } }),
-      prisma.experiment.findMany({ where: { operatorId } }),
-      prisma.measurement.count({ where: { operatorId, kind: "BASELINE" } }),
-    ]);
-    const draft = buildBrief({
-      weekOf,
-      signals,
-      opportunities,
-      tasks: tasks.map((t) => ({ ...t, assigneeName: t.assignee?.name ?? null })),
-      experiments,
-      hasBaseline: baselineCount > 0,
-    });
+    // Only what the business can already see: the brief can be shared with them.
+    const draft = buildBrief(await briefInputFor(operatorId, weekOf));
     const b = await prisma.growthBrief.create({
       data: {
         operatorId, weekOf, whatChanged: draft.whatChanged, whyItMatters: draft.whyItMatters, actions: draft.actions as never,

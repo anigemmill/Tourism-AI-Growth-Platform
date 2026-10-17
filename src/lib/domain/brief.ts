@@ -1,6 +1,8 @@
 // Weekly Growth Brief (Scan → Brief → Learn), ported from the Tourism Growth
 // Intelligence daily-brief builder. Pure function over already-stored data:
 // it never invents a signal, number or action. Gaps are stated, not filled.
+// A shared brief is read by the business itself, so its wording addresses
+// them, and its input must only contain items they can already see.
 
 import type { ClaimType, ConfidenceLevel, Horizon, WorkStatus } from "@/generated/prisma";
 import { priorityScore } from "./prioritise";
@@ -42,7 +44,7 @@ export function buildBrief(input: BriefInput, maxActions = 3): BriefDraft {
     .slice(0, 6);
 
   const dataGaps: string[] = [];
-  if (recent.length === 0) dataGaps.push("No new signals in the last 14 days — nothing new to report. Ask the operator for this week's enquiries/reviews.");
+  if (recent.length === 0) dataGaps.push("No new updates in the last 14 days. Send us this week's enquiries or reviews and the next brief will include them.");
   if (!input.hasBaseline) dataGaps.push("No baseline measurement recorded — results cannot be compared yet.");
 
   const candidates = input.opportunities
@@ -59,7 +61,7 @@ export function buildBrief(input: BriefInput, maxActions = 3): BriefDraft {
       actions.push({
         action: `${t.status === "BLOCKED" ? "Unblock" : "Complete"}: ${t.title}`,
         why: t.status === "BLOCKED" ? "Blocked work is holding up an implementation." : "This task is overdue.",
-        owner: t.assigneeName ?? t.ownerLabel ?? "Unassigned — set an owner",
+        owner: t.assigneeName ?? t.ownerLabel ?? "To be agreed",
         effort: "S",
         measure: "Task marked done",
         needsApproval: t.requiresApproval,
@@ -70,15 +72,15 @@ export function buildBrief(input: BriefInput, maxActions = 3): BriefDraft {
   for (const o of candidates) {
     if (actions.length >= maxActions) break;
     actions.push({
-      action: o.status === "APPROVED" || o.status === "IN_PROGRESS" ? `Progress: ${o.title}` : `Decide whether to start: ${o.title}`,
+      action: o.status === "APPROVED" || o.status === "IN_PROGRESS" ? `Progress: ${o.title}` : `Decide together whether to start: ${o.title}`,
       why: o.problem,
-      owner: "Agree with operator",
+      owner: "To be agreed with you",
       effort: o.effortScore <= 2 ? "S" : o.effortScore >= 4 ? "L" : "M",
       measure: o.successMetric ?? "Define a success metric before starting",
       needsApproval: true,
     });
   }
-  if (actions.length === 0) dataGaps.push("No NOW-horizon opportunities or overdue tasks — review the roadmap with the operator.");
+  if (actions.length === 0) dataGaps.push("No priority actions this week. We'll review your plan with you.");
 
   const done = input.experiments.filter((e) => e.status === "COMPLETE" || e.status === "ANALYSING");
   const learnings = done.length

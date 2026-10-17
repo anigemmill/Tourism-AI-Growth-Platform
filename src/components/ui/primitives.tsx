@@ -212,7 +212,7 @@ export function EmptyState({
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx("-mx-px overflow-x-auto", className)}>
+    <div className={cx("relative -mx-px overflow-x-auto", className)}>
       <table className="w-full border-collapse text-sm [&_td]:border-t [&_td]:border-line [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top [&_th]:whitespace-nowrap [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted">
         {children}
       </table>

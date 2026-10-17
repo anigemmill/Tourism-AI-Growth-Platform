@@ -67,10 +67,24 @@ function emailFor(purpose: AuthTokenPurpose, name: string, link: string, invited
 export interface Delivery {
   emailed: boolean;
   /**
-   * Only when email is not configured and the caller is allowed to hand the
-   * link over in person (a super admin). Shown once; never stored or logged.
+   * Only when the caller is allowed to hand the link over in person (a super
+   * admin) and the email couldn't go out (see manualLinkAllowed). Shown once;
+   * never stored or logged.
    */
   manualLink?: string;
+  /** Why the email wasn't sent, when it wasn't. */
+  reason?: "not_configured" | "send_failed";
+}
+
+/**
+ * A super admin may receive the link to hand over in person when email isn't
+ * set up at all, or, for invitations only, when sending failed (bad address,
+ * provider outage), so onboarding never needs database access. Password-reset
+ * links stay email-only once email works: people can request their own.
+ */
+export function manualLinkAllowed(purpose: AuthTokenPurpose, opts: { allowManualLink?: boolean; emailConfigured: boolean }): boolean {
+  if (!opts.allowManualLink) return false;
+  return !opts.emailConfigured || purpose === "INVITE";
 }
 
 /** Issues a token for `purpose` and emails the link to the user. */
@@ -84,8 +98,10 @@ export async function sendAccountLink(
   const link = linkFor(purpose, token);
   const res = await sendEmail({ to: user.email, ...emailFor(purpose, user.name, link, opts.actorName) });
   if (res.sent) return { emailed: true };
-  if (opts.allowManualLink && !emailConfigured()) return { emailed: false, manualLink: link };
-  return { emailed: false };
+  const configured = emailConfigured();
+  const reason = configured ? "send_failed" : "not_configured";
+  if (manualLinkAllowed(purpose, { allowManualLink: opts.allowManualLink, emailConfigured: configured })) return { emailed: false, manualLink: link, reason };
+  return { emailed: false, reason };
 }
 
 // ---------------------------------------------------------------------------
